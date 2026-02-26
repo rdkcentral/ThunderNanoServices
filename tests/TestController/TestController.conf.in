@@ -1,7 +1,0 @@
-startmode = "Activated"
-
-configuration = JSON()
-
-rootobject = JSON()
-rootobject.add("mode", "@PLUGIN_TESTCONTROLLER_MODE@")
-configuration.add("root", rootobject)

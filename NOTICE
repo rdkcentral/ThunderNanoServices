@@ -1,4 +1,4 @@
-This component contains software that is Copyright (c) 2020 Metrological.
+This component contains software that is Copyright (c) YEAR COMPANY_NAME.
 The component is licensed to you under the Apache License, Version 2.0 (the "License").
 You may not use the component except in compliance with the License.
 
@@ -7,35 +7,5 @@ listed below. Your use of this material within the component is also subject to 
 conditions of these licenses. The LICENSE file contains the text of all the licenses which apply
 within this component.
 
-Copyright (C) 2016 TATA ELXSI
-Copyright (C) 2016 Metrological
-Licensed under the BSD-2 license
 
-Copyright 2002-2010 Guillaume Cottenceau.
-Licensed under the X11 license
-
-Copyright (C) 2015 Metrological.
-Licensed under the BSD-2 license
-
-Copyright (C) 2012 Intel Corporation. 
-Licensed under the BSD-2 license
-
-Copyright (C) 2014 Igalia S.L.
-Licensed under the BSD-2 license
-
-Copyright 2025 RDK Management
-Licensed under the Apache License, V2.0
-
-Copyright (C) 2012 Raphael Kubo da Costa <rakuco@webkit.org>
-Licensed under the BSD-2 license
-
-Copyright (c) 2008-2011 Kristian Høgsberg
-Copyright (c) 2010-2011 Intel Corporation
-Licensed under the MIT License (sell variant).
-
-Copyright (c) 2020 Aleix Pol Gonzalez aleixpol@kde.org
-Copyright (c) 2020 Carlos Garnacho carlosg@gnome.org
-Licensed under the X11 License.
-
-Material from RFC-2131 is subject to the following:
-"Distributiion of this memo is unlimited."
+ADD EXTRA CREDITS HERE
