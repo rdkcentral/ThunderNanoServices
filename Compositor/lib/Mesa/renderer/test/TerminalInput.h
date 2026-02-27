@@ -30,7 +30,9 @@ public:
     char Read()
     {
         char c = 0;
+PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT)
         read(STDIN_FILENO, &c, 1);
+POP_WARNING()
         return c;
     }
 
