@@ -29,6 +29,8 @@ namespace Plugin {
 
     class JsonRpcMuxer::Processor {
     private:
+        static constexpr Core::hresult ACCEPT_AND_LEAVE_CONNECTION_OPEN_TILL_PROCESSED = Core::hresult(~0);
+
         class Batch {
         private:
             enum state : uint8_t {
@@ -80,15 +82,20 @@ namespace Plugin {
                 Core::JSONRPC::Message::Info Error;
             };
 
+        public:
             class Request {
+            private:
+                friend class Batch;
+
             public:
                 Request() = delete;
                 Request(const Request&) = delete;
                 Request& operator=(Request&&) = delete;
                 Request& operator=(const Request&) = delete;
 
-                Request(const Core::JSONRPC::Message& message)
-                    : _id(message.Id.Value())
+                Request(Batch& batch, const Core::JSONRPC::Message& message)
+                    : _batch(batch)
+                    , _id(message.Id.Value())
                     , _designator(message.Designator.Value())
                     , _data(message.Parameters.Value())
                     , _errorCode(Core::ERROR_GENERAL)
@@ -98,7 +105,8 @@ namespace Plugin {
                 ~Request() = default;
 
                 Request(Request&& other) noexcept
-                    : _id(other._id)
+                    : _batch(other._batch)
+                    , _id(other._id)
                     , _designator(other._designator)
                     , _data(std::move(other._data))
                     , _errorCode(other._errorCode)
@@ -115,6 +123,14 @@ namespace Plugin {
                 {
                     return (_id);
                 }
+                inline uint32_t ChannelId() const
+                {
+                    return _batch.ChannelId();
+                }
+                inline const string& Token() const
+                {
+                    return _batch.Token();
+                }
                 inline const string& Designator() const
                 {
                     return (_designator);
@@ -125,13 +141,7 @@ namespace Plugin {
                 }
                 inline void Set(const Core::hresult errorCode, const string& output)
                 {
-                    _completed = true;
-                    if (errorCode == Core::ERROR_NONE) {
-                        _data = output;
-                    } else {
-                        _errorCode = errorCode;
-                        _data = output;
-                    }
+                    _batch.CompleteRequest(*this, errorCode, output);
                 }
                 inline Core::hresult ErrorCode() const
                 {
@@ -139,49 +149,12 @@ namespace Plugin {
                 }
 
             private:
+                Batch& _batch;
                 const uint32_t _id;
                 const string _designator;
                 string _data;
                 Core::hresult _errorCode;
                 bool _completed;
-            };
-
-        public:
-            class Job : public Core::IDispatch {
-            public:
-                Job() = delete;
-                Job(Job&&) = delete;
-                Job(const Job&) = delete;
-                Job& operator=(const Job&) = delete;
-                Job& operator=(Job&&) = delete;
-
-                Job(Batch& parent, Request& request)
-                    : _parent(parent)
-                    , _context(request)
-                {
-                    TRACE(Trace::Information, (_T("Constructing job %p"), this));
-                }
-
-                virtual ~Job()
-                {
-                    TRACE(Trace::Information, (_T("Destructing job %p"), this));
-                }
-
-                void Dispatch() override
-                {
-                    TRACE(Trace::Information, (_T("Dispatch job %p"), this));
-                    _parent.Process(this);
-                    TRACE(Trace::Information, (_T("Dispatch job %p Done"), this));
-                }
-
-                Request& Context()
-                {
-                    return _context;
-                }
-
-            private:
-                Batch& _parent;
-                Request& _context;
             };
 
             Batch() = delete;
@@ -209,7 +182,7 @@ namespace Plugin {
                 _requests.reserve(requests.Elements().Count());
 
                 while (index.Next() == true) {
-                    _requests.emplace_back(index.Current());
+                    _requests.emplace_back(*this, index.Current());
                 }
 
                 TRACE(Trace::Information, (_T("Created batch[responseId] with %d requests"), _requests.size()));
@@ -226,6 +199,11 @@ namespace Plugin {
             uint32_t ChannelId() const
             {
                 return _channelId;
+            }
+
+            const string& Token() const
+            {
+                return _token;
             }
 
             uint32_t ResponseId() const
@@ -283,62 +261,79 @@ namespace Plugin {
                 return result;
             }
 
-            Core::ProxyType<Job> GetJob()
+            Request* GetRequest()
             {
-                Core::ProxyType<Job> job;
+                Request* request = nullptr;
+
+                _lock.Lock();
 
                 if (_current < _requests.size()) {
-                    job = Core::ProxyType<Job>::Create(*this, _requests[_current]);
+                    request = &_requests[_current];
                     _current++;
-
-                    _lock.Lock();
                     _activeJobCount++;
-                    _lock.Unlock();
 
-                    TRACE(Trace::Information, (_T("Batch[%d] Provided job %d/%d"), _responseId, _current, _requests.size()));
+                    TRACE(Trace::Information, (_T("Batch[%d] Provided request %d/%d"), _responseId, _current, _requests.size()));
                 }
 
-                return job;
+                _lock.Unlock();
+
+                return request;
             }
 
             bool IsActive() const
             {
-                return _activeJobCount > 0;
+                _lock.Lock();
+                bool active = _activeJobCount > 0;
+                _lock.Unlock();
+                return active;
             }
 
-        private:
-            void Process(Job* job)
+            void Complete()
             {
-                ASSERT(job != nullptr);
-
-                string response;
-                Core::hresult result = Core::ERROR_NONE;
-                Request& request = job->Context();
-
                 _lock.Lock();
 
                 if ((_state != ABORTED) && (_state != COMPLETED)) {
-                    _lock.Unlock();
-
-                    result = _parent.Invoke(_channelId, request.Id(), _token, request.Designator(), request.Parameters(), response);
-                    request.Set(result, response);
-
-                    _lock.Lock();
-
                     ++_completed;
-                }
 
-                if (_completed == _requests.size()) {
-                    _state = COMPLETED;
+                    if (_completed == _requests.size()) {
+                        _state = COMPLETED;
+                    }
                 }
 
                 _activeJobCount--;
 
-                TRACE(Trace::Information, (_T("Batch[%d] completed request[%d] (%d/%d)"), _responseId, request.Id(), _completed, _requests.size()));
+                TRACE(Trace::Information, (_T("Batch[%d] completed request (%d/%d)"), _responseId, _completed, _requests.size()));
 
                 _lock.Unlock();
+            }
 
-                _parent.Checkout(job);
+            void CompleteRequest(Request& request, const Core::hresult errorCode, const string& output)
+            {
+                _lock.Lock();
+
+                // Update request data under lock
+                request._completed = true;
+                if (errorCode == Core::ERROR_NONE) {
+                    request._data = output;
+                } else {
+                    request._errorCode = errorCode;
+                    request._data = output;
+                }
+
+                // Update batch state
+                if ((_state != ABORTED) && (_state != COMPLETED)) {
+                    ++_completed;
+
+                    if (_completed == _requests.size()) {
+                        _state = COMPLETED;
+                    }
+                }
+
+                _activeJobCount--;
+
+                TRACE(Trace::Information, (_T("Batch[%d] completed request (%d/%d)"), _responseId, _completed, _requests.size()));
+
+                _lock.Unlock();
             }
 
         private:
@@ -353,6 +348,52 @@ namespace Plugin {
             uint16_t _completed;
             mutable state _state;
             uint16_t _activeJobCount;
+        };
+
+        class Job : public Core::IDispatch {
+        public:
+            Job() = delete;
+            Job(Job&&) = delete;
+            Job(const Job&) = delete;
+            Job& operator=(const Job&) = delete;
+            Job& operator=(Job&&) = delete;
+
+            Job(Processor& processor, Batch::Request& request)
+                : _processor(processor)
+                , _request(request)
+            {
+                TRACE(Trace::Information, (_T("Constructing job %p"), this));
+            }
+
+            virtual ~Job()
+            {
+                TRACE(Trace::Information, (_T("Destructing job %p"), this));
+            }
+
+            void Dispatch() override
+            {
+                TRACE(Trace::Information, (_T("Dispatch job %p"), this));
+
+                // Safety check: don't execute if processor is shutting down
+                if (_processor._shuttingDown) {
+                    TRACE(Trace::Warning, (_T("Job %p aborted - processor shutting down"), this));
+                    return;
+                }
+
+                string response;
+
+                Core::hresult result = _processor.Invoke(_request, response);
+
+                _request.Set(result, response);
+
+                _processor.Checkout(this);
+
+                TRACE(Trace::Information, (_T("Dispatch job %p Done"), this));
+            }
+
+        private:
+            Processor& _processor;
+            Batch::Request& _request;
         };
 
     public:
@@ -401,7 +442,7 @@ namespace Plugin {
 
         void Stop()
         {
-            std::vector<Core::ProxyType<Batch::Job>> jobsToRevoke;
+            std::vector<Core::ProxyType<Job>> jobsToRevoke;
 
             _lock.Lock();
 
@@ -449,11 +490,11 @@ namespace Plugin {
 
             Process();
 
-            return ~0;
+            return ACCEPT_AND_LEAVE_CONNECTION_OPEN_TILL_PROCESSED;
         }
 
     private:
-        void Checkout(Batch::Job* job)
+        void Checkout(Job* job)
         {
             ASSERT(job != nullptr);
 
@@ -479,10 +520,10 @@ namespace Plugin {
             }
         }
 
-        uint32_t Invoke(const uint32_t channelId, const uint32_t id, const string& token, const string& method, const string& parameters, string& response)
+        uint32_t Invoke(const Batch::Request& request, string& response)
         {
             if (_dispatch != nullptr) {
-                return _dispatch->Invoke(channelId, id, token, method, parameters, response);
+                return _dispatch->Invoke(request.ChannelId(), request.Id(), request.Token(), request.Designator(), request.Parameters(), response);
             } else {
                 response = "IDispatcher not available";
                 return Core::ERROR_UNAVAILABLE;
@@ -534,9 +575,10 @@ namespace Plugin {
                                 break; // This batch already has a job, move to next batch
                             }
 
-                            Core::ProxyType<Batch::Job> job = batch->GetJob();
+                            Batch::Request* request = batch->GetRequest();
 
-                            if (job.IsValid() == true) {
+                            if (request != nullptr) {
+                                Core::ProxyType<Job> job = Core::ProxyType<Job>::Create(*this, *request);
                                 _activeJobs.emplace_back(job);
                                 Core::IWorkerPool::Instance().Submit(Core::ProxyType<Core::IDispatch>(job));
                                 TRACE(Trace::Information, (_T("Submitted job %p..."), job.operator->()));
@@ -588,7 +630,7 @@ namespace Plugin {
         const uint8_t _maxConcurrentJobs;
         bool _shuttingDown;
         std::vector<Batch*> _batches;
-        std::vector<Core::ProxyType<Batch::Job>> _activeJobs;
+        std::vector<Core::ProxyType<Job>> _activeJobs;
     };
 
     JsonRpcMuxer::JsonRpcMuxer()
