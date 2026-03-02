@@ -53,6 +53,7 @@ namespace Plugin {
         } else {
             _maxparallel = 2;
         }
+        SYSLOG(Logging::Startup, (_T("configured MaxParallel[%u]"), _maxparallel));
         _maxretries = config.MaxRetries.Value();
         _delay = config.Delay.Value();
 
