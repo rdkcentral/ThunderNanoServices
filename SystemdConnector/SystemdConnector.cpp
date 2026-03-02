@@ -50,11 +50,14 @@ namespace Plugin {
     {
         TRACE(Trace::Information, (_T("Notify systemd that the Platform is up and running.\n")));
 
+        /*
         int rc = sd_notifyf(0,
             "READY=1\n"
             "STATUS=Platform Server is Ready (from WPE Framework Compositor Plugin)\n"
             "MAINPID=%d",
             ::getpid());
+            */
+        int rc = sd_notify(0, "READY=1");
         if (rc) {
             TRACE(Trace::Error, (_T("Notify Nexus Server Ready to systemd: FAILED (%d)\n"), rc));
         } else {
