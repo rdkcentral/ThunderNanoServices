@@ -998,20 +998,22 @@ POP_WARNING()
 
     private:
 
-        // must be called from inside the lock
-        void ActivateNotifications()
+        // must be called from inside the lock.
+        // Returns true if the caller must call ChangeNotificationRegistration(Register) AFTER releasing _adminLock.
+        // NOTE: Do NOT call ChangeNotificationRegistration while _adminLock is held — doing so acquires
+        // NotificationsJob::_lock, which creates a deadlock cycle with the ServiceMap lock that is held
+        // when plugin notifications are dispatched (those callbacks also need _adminLock).
+        bool ShouldActivateNotifications() const
         {
-            if (_pluginInitList.size() == 1) { // note size() is constant time (so fast, c++11)
-                ChangeNotificationRegistration(NotificationsJob::Mode::Register);
-            }
+            return (_pluginInitList.size() == 1); // note size() is constant time (so fast, c++11)
         }
 
-        // must be called from inside the lock
-        void DeactivateNotifications()
+        // must be called from inside the lock.
+        // Returns true if the caller must call ChangeNotificationRegistration(Unregister) AFTER releasing _adminLock.
+        // See ShouldActivateNotifications() for the lock-ordering rationale.
+        bool ShouldDeactivateNotifications() const
         {
-            if (_pluginInitList.size() == 0) { // note size() is constant time (so fast, c++11) 
-                ChangeNotificationRegistration(NotificationsJob::Mode::Unregister);
-            }
+            return (_pluginInitList.size() == 0); // note size() is constant time (so fast, c++11)
         }
 
         void ChangeNotificationRegistration(const NotificationsJob::Mode mode)
@@ -1022,6 +1024,8 @@ POP_WARNING()
         bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
         {
             bool result = true;
+            bool doRegister = false;
+            bool doUnregister = false;
             PluginStarter starter(requestedPluginShell, maxnumberretries, delay, callback, *this);
 
             _adminLock.Lock();
@@ -1031,9 +1035,9 @@ POP_WARNING()
                 ASSERT(_pluginInitList.size() < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
 
                 _pluginInitList.emplace_back(std::move(starter));
-                ActivateNotifications();
+                doRegister = ShouldActivateNotifications();
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
+                doUnregister = ShouldDeactivateNotifications(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
             }
             else {
                 //oops this callsign was already requested...
@@ -1041,6 +1045,18 @@ POP_WARNING()
             }
 
             _adminLock.Unlock();
+
+            // Call ChangeNotificationRegistration OUTSIDE _adminLock to avoid deadlock:
+            // SetMode acquires NotificationsJob::_lock, and Dispatch (which holds _lock) calls
+            // Register/Unregister (which takes the ServiceMap lock), and the ServiceMap notification
+            // dispatch (which holds the ServiceMap lock) calls back into methods that need _adminLock.
+            if (doRegister) {
+                ChangeNotificationRegistration(NotificationsJob::Mode::Register);
+            }
+            if (doUnregister) {
+                ChangeNotificationRegistration(NotificationsJob::Mode::Unregister);
+            }
+
             return result;
         }
 
@@ -1082,6 +1098,7 @@ POP_WARNING()
         bool CancelPluginStarter(const string& callsign)
         {
             bool result = false;
+            bool doUnregister = false;
 
             _adminLock.Lock();
 
@@ -1090,9 +1107,12 @@ POP_WARNING()
                 PluginStarter toAbort(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                doUnregister = ShouldDeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 result = true;
+                if (doUnregister) {
+                    ChangeNotificationRegistration(NotificationsJob::Mode::Unregister); // called outside _adminLock to avoid deadlock (see NewPluginStarter)
+                }
                 toAbort.Abort(); // note it is essential this is called outside the lock
             } else {
                 _adminLock.Unlock();
@@ -1103,6 +1123,8 @@ POP_WARNING()
 
         void ActivatedNotification(const string& callsign)
         {
+            bool doUnregister = false;
+
             _adminLock.Lock();
 
             PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
@@ -1111,8 +1133,11 @@ POP_WARNING()
                 PluginStarter activated(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                doUnregister = ShouldDeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
+                if (doUnregister) {
+                    ChangeNotificationRegistration(NotificationsJob::Mode::Unregister); // called outside _adminLock to avoid deadlock (see NewPluginStarter)
+                }
                 activated.Activated(); // note it is essential this is called outside the lock
             } else {
                 _adminLock.Unlock();
@@ -1121,6 +1146,8 @@ POP_WARNING()
 
         void DeinitializedNotification(const string& callsign)
         {
+            bool doUnregister = false;
+
             _adminLock.Lock();
 
             PluginStarterContainer::iterator it = std::find(_pluginInitList.begin(), _pluginInitList.end(), callsign);
@@ -1130,8 +1157,11 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                    doUnregister = ShouldDeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
+                    if (doUnregister) {
+                        ChangeNotificationRegistration(NotificationsJob::Mode::Unregister); // called outside _adminLock to avoid deadlock (see NewPluginStarter)
+                    }
                     failed.Failed();
                 } else if (result == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
@@ -1157,6 +1187,7 @@ POP_WARNING()
         }
 
         void ActivationResultNotification(const string& callsign, const Core::hresult result) {
+            bool doUnregister = false;
 
             _adminLock.Lock();
 
@@ -1170,8 +1201,11 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
+                    doUnregister = ShouldDeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
+                    if (doUnregister) {
+                        ChangeNotificationRegistration(NotificationsJob::Mode::Unregister); // called outside _adminLock to avoid deadlock (see NewPluginStarter)
+                    }
                     failed.Failed(); // Very small chance we tried to activate and then for example detected in the mean time because of external reasons we moved to destroyed, so we need to cleanup now as we were coming from an activating state
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
