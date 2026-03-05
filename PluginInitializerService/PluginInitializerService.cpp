@@ -56,6 +56,7 @@ namespace Plugin {
         SYSLOG(Logging::Startup, (_T("configured MaxParallel[%u]"), _maxparallel));
         _maxretries = config.MaxRetries.Value();
         _delay = config.Delay.Value();
+        service->Register(static_cast<IPlugin::INotification*>(&_sink));
 
         if (message.empty() == true) {
             _service = service;
@@ -75,6 +76,7 @@ namespace Plugin {
         CancelAll();
 
         if (_service != nullptr) {
+            _service->Unregister(static_cast<IPlugin::INotification*>(&_sink));
             _service->Release();
             _service = nullptr;
         }

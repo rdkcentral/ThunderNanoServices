@@ -1031,9 +1031,7 @@ POP_WARNING()
                 ASSERT(_pluginInitList.size() < std::numeric_limits<uint16_t>::max()); // I'll bet this will fire at some point :)
 
                 _pluginInitList.emplace_back(std::move(starter));
-                ActivateNotifications();
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // could be that the Activation failed/succeeded immediately and the list is again empty here so check if notifications no longer needed
             }
             else {
                 //oops this callsign was already requested...
@@ -1090,7 +1088,6 @@ POP_WARNING()
                 PluginStarter toAbort(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 result = true;
                 toAbort.Abort(); // note it is essential this is called outside the lock
@@ -1111,7 +1108,6 @@ POP_WARNING()
                 PluginStarter activated(std::move(*it));
                 _pluginInitList.erase(it);
                 ActivateAnotherPlugin();
-                DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                 _adminLock.Unlock();
                 activated.Activated(); // note it is essential this is called outside the lock
             } else {
@@ -1130,12 +1126,10 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed();
                 } else if (result == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
-                    // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
                     _adminLock.Unlock();
                 } else { // continue will be handled in the follow up notification
                     _adminLock.Unlock();
@@ -1170,12 +1164,10 @@ POP_WARNING()
                     PluginStarter failed(std::move(*it));
                     _pluginInitList.erase(it); // we're done retrying just give up and remove it from the list
                     ActivateAnotherPlugin();
-                    DeactivateNotifications(); // we need to do this whether or not we called ActivateAnotherPlugin here
                     _adminLock.Unlock();
                     failed.Failed(); // Very small chance we tried to activate and then for example detected in the mean time because of external reasons we moved to destroyed, so we need to cleanup now as we were coming from an activating state
                 } else if (resultcode == PluginStarter::ResultCode::Paused) {
                     ActivateAnotherPlugin();
-                    // no need to check if we need to DeactivateNotificationsIfPossible as the paused one must be there
                     _adminLock.Unlock();
                 } else { // we need to continue, handled in the follow up notifications 
                     _adminLock.Unlock();
