@@ -36,7 +36,7 @@ add_library(${LIB_NAME} STATIC
     PlayerImplementation.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES)
 
 target_include_directories(${LIB_NAME}

@@ -18,7 +18,7 @@
 add_library(CommonTransformation INTERFACE)
 
 set_target_properties(CommonTransformation PROPERTIES
-    CXX_STANDARD 11
+    CXX_STANDARD ${CXX_STD}
     CXX_STANDARD_REQUIRED YES
 )
 
