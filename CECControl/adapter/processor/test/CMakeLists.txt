@@ -9,7 +9,7 @@ add_executable(cec_processor_test
 )
 
 set_target_properties(cec_processor_test PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         ENABLE_EXPORTS FALSE)
 

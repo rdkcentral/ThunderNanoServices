@@ -49,7 +49,7 @@ target_compile_definitions(CommonBufferGBM
 )
 
 set_target_properties(CommonBufferGBM PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         POSITION_INDEPENDENT_CODE ON
 )
