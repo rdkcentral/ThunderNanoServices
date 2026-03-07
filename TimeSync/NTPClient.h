@@ -339,7 +339,7 @@ namespace Plugin {
     public:
         void Initialize(SourceIterator& sources, const uint16_t retries, const uint16_t delay);
         void Register(Exchange::ITimeSync::ISource::INotification* notification) override;
-        void Unregister(Exchange::ITimeSync::ISource::INotification* notification) override;
+        void Unregister(const Exchange::ITimeSync::ISource::INotification* notification) override;
 
         uint32_t Synchronize() override;
         void Cancel() override;

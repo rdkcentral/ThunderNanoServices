@@ -731,7 +731,7 @@ POP_WARNING()
             _adminLock.Unlock();
         }
 
-        void Unregister(Exchange::IBrowser::INotification* sink) override
+        void Unregister(const Exchange::IBrowser::INotification* sink) override
         {
             ASSERT(sink != nullptr);
             _adminLock.Lock();

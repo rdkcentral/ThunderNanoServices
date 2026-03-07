@@ -212,7 +212,7 @@ POP_WARNING()
         _adminLock.Unlock();
     }
 
-    void SwitchBoard::Unregister(Exchange::ISwitchBoard::INotification* notification)
+    void SwitchBoard::Unregister(const Exchange::ISwitchBoard::INotification* notification)
     {
         ASSERT(notification != nullptr);
 

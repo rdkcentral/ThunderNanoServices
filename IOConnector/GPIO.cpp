@@ -287,7 +287,7 @@ namespace GPIO
         _timedPin.Register(sink);
     }
 
-    void Pin::Unregister(IInputPin::INotification* sink) /* override */ {
+    void Pin::Unregister(const IInputPin::INotification* sink) /* override */ {
         _timedPin.Unregister(sink);
     }
 
