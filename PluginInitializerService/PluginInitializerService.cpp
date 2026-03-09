@@ -53,7 +53,7 @@ namespace Plugin {
         } else {
             _maxparallel = 2;
         }
-        TRACE(Logging::Information, (_T("configured MaxParallel[%u]"), _maxparallel));
+        TRACE(Trace::Information, (_T("configured MaxParallel[%u]"), _maxparallel));
         _maxretries = config.MaxRetries.Value();
         _delay = config.Delay.Value();
         service->Register(static_cast<IPlugin::INotification*>(&_sink));
