@@ -34,4 +34,8 @@ target_link_libraries(SimpleWorker
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
+set_target_properties(SimpleWorker PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 add_library(SimpleWorker::SimpleWorker ALIAS SimpleWorker)
