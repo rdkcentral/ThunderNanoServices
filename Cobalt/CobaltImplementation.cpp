@@ -455,7 +455,7 @@ public:
         _adminLock.Unlock();
     }
 
-    void Unregister(Exchange::IBrowser::INotification *sink)  override
+    void Unregister(const Exchange::IBrowser::INotification *sink)  override
     {
         ASSERT(sink != nullptr);
 
@@ -480,7 +480,7 @@ public:
         // Kept empty since visibility change is not supported
     }
 
-    void Unregister(VARIABLE_IS_NOT_USED Exchange::IApplication::INotification* sink) override
+    void Unregister(VARIABLE_IS_NOT_USED const Exchange::IApplication::INotification* sink) override
     {
         // Kept empty since visibility change is not supported
     }
@@ -595,7 +595,7 @@ public:
         _adminLock.Unlock();
     }
 
-    void Unregister(PluginHost::IStateControl::INotification *sink) override
+    void Unregister(const PluginHost::IStateControl::INotification *sink) override
     {
         ASSERT(sink != nullptr);
 
