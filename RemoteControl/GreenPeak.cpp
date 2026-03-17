@@ -71,7 +71,9 @@ namespace Plugin {
             struct stat st;
             fstat(fd, &st);
             void* image = malloc(st.st_size);
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             read(fd, image, st.st_size);
+            POP_WARNING()
             close(fd);
             if (::syscall(__NR_init_module, image, st.st_size, params) != 0) {
                 perror("init_module failed");
