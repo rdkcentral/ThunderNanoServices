@@ -755,7 +755,9 @@ namespace Plugin {
         void Block()
         {
             Core::Thread::Block();
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             write(_pipe[1], " ", 1);
+            POP_WARNING()
             Wait(Core::Thread::INITIALIZED | Core::Thread::BLOCKED | Core::Thread::STOPPED, Core::infinite);
         }
         uint32_t Worker() override
@@ -779,7 +781,9 @@ namespace Plugin {
                 if (result > 0) {
                     if (FD_ISSET(_pipe[0], &readset)) {
                         char buff;
-                        (void)read(_pipe[0], &buff, 1);
+                        PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
+                        read(_pipe[0], &buff, 1);
+                        POP_WARNING()                        
                     }
                     if (FD_ISSET(_update, &readset)) {
                         // Make the call to receive the device. select() ensured that this will not block.
