@@ -249,7 +249,7 @@ namespace Plugin
         _adminLock.Unlock();
     }
 
-    /* virtual */ void IOConnector::Unregister(Exchange::IExternal::ICatalog::INotification* sink)
+    /* virtual */ void IOConnector::Unregister(const Exchange::IExternal::ICatalog::INotification* sink)
     {
         ASSERT(sink != nullptr);
 

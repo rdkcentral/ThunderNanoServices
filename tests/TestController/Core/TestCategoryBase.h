@@ -64,7 +64,7 @@ namespace TestCore {
             _adminLock.Unlock();
         }
 
-        void Unregister(QualityAssurance::ITestController::ITest* test) override
+        void Unregister(const QualityAssurance::ITestController::ITest* test) override
         {
             ASSERT(test != nullptr);
 

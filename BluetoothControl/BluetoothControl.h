@@ -3635,7 +3635,7 @@ class BluetoothControl : public PluginHost::IPlugin
         // Exchange::IBluetooth overrides
         // -------------------------------------------------------------------------------------------------------
         uint32_t Register(IBluetooth::INotification* notification) override;
-        uint32_t Unregister(IBluetooth::INotification* notification) override;
+        uint32_t Unregister(const IBluetooth::INotification* notification) override;
         /* DEPRECATED */ bool IsScanning() const override;
         /* DEPRECATED */ uint32_t Scan(const bool lowEnergy, const uint16_t duration) override;
         /* DEPRECATED */ uint32_t StopScanning() override;

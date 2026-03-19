@@ -483,7 +483,7 @@ POP_WARNING()
             _adminLock.Unlock();
         }
 
-        virtual void Unregister(Exchange::IBrowser::INotification* sink) override
+        virtual void Unregister(const Exchange::IBrowser::INotification* sink) override
         {
             ASSERT(sink != nullptr);
 
