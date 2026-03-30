@@ -42,6 +42,13 @@ using PFNEGLDESTROYSYNCPROC = PFNEGLDESTROYSYNCKHRPROC;
 using PFNEGLWAITSYNCPROC = PFNEGLWAITSYNCKHRPROC;
 using PFNEGLCLIENTWAITSYNCPROC = PFNEGLCLIENTWAITSYNCKHRPROC;
 
+using EGL_NO_SYNC = EGL_NO_SYNC_KHR;
+using EGL_SYNC_FENCE = EGL_SYNC_FENCE_KHR;
+using EGL_CONDITION_SATISFIED = EGL_CONDITION_SATISFIED_KHR;
+using EGL_SYNC_FLUSH_COMMANDS_BIT = EGL_SYNC_FLUSH_COMMANDS_BIT_KHR;
+using EGL_ALREADY_SIGNALED = EGL_ALREADY_SIGNALED_KHR;
+using EGL_TIMEOUT_EXPIRED = EGL_TIMEOUT_EXPIRED_KHR;
+ 
 constexpr char eglCreateImageProc[] = "eglCreateImageKHR";
 constexpr char eglDestroyImageProc[] = "eglDestroyImageKHR";
 constexpr char eglCreateSyncProc[] = "eglCreateSyncKHR";
@@ -307,6 +314,7 @@ namespace API {
             , eglClientWaitSync(nullptr)
             , eglExportDmaBufImageQueryMesa(nullptr)
             , eglExportDmaBufImageMesa(nullptr)
+            , eglDupNativeFenceFDANDROID(nullptr)
         {
             eglGetPlatformDisplayEXT = reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
             eglQueryDmaBufFormatsEXT = reinterpret_cast<PFNEGLQUERYDMABUFFORMATSEXTPROC>(eglGetProcAddress("eglQueryDmaBufFormatsEXT"));
@@ -327,6 +335,8 @@ namespace API {
 
             eglExportDmaBufImageQueryMesa = reinterpret_cast<PFNEGLEXPORTDMABUFIMAGEQUERYMESAPROC>(eglGetProcAddress("eglExportDMABUFImageQueryMESA"));
             eglExportDmaBufImageMesa = reinterpret_cast<PFNEGLEXPORTDMABUFIMAGEMESAPROC>(eglGetProcAddress("eglExportDMABUFImageMESA"));
+
+            eglDupNativeFenceFDANDROID = reinterpret_cast<PFNEGLDUPNATIVEFENCEFDANDROIDPROC>(eglGetProcAddress("eglDupNativeFenceFDANDROID"));
         }
 
     public:
@@ -350,6 +360,8 @@ namespace API {
 
         PFNEGLEXPORTDMABUFIMAGEQUERYMESAPROC eglExportDmaBufImageQueryMesa;
         PFNEGLEXPORTDMABUFIMAGEMESAPROC eglExportDmaBufImageMesa;
+
+        PFNEGLDUPNATIVEFENCEFDANDROIDPROC eglDupNativeFenceFDANDROID;
     }; // class EGL
 
 } // namespace API

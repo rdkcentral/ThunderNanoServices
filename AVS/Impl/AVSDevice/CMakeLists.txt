@@ -39,7 +39,7 @@ endif()
 add_library(${MODULE_NAME} ${PLUGIN_AVS_AVSDEVICE_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED ON)
 
 target_include_directories(${MODULE_NAME}

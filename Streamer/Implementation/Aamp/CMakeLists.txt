@@ -45,5 +45,9 @@ target_link_libraries(${LIB_NAME}
         ${GLIB_GIO_LIBRARIES}
         ${GLIB_LIBRARIES})
 
+set_target_properties(${LIB_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 install(TARGETS ${LIB_NAME}
 	DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT ${NAMESPACE}_Development)

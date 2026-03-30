@@ -36,6 +36,10 @@ add_library(${MODULE_NAME} SHARED
     ScriptEngine.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_link_libraries(${MODULE_NAME} 
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug

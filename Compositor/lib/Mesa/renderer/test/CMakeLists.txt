@@ -22,7 +22,7 @@ target_link_libraries(testclear
 )
 
 set_target_properties(testclear PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
 )
 
@@ -44,7 +44,7 @@ target_link_libraries(testquads
 )
 
 set_target_properties(testquads PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
 )
 
@@ -68,7 +68,7 @@ target_link_libraries(testtexture
 )
 
 set_target_properties(testtexture PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
 )
 
@@ -91,7 +91,7 @@ target_link_libraries(testdmabuf
 )
 
 set_target_properties(testdmabuf PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
 )
 
