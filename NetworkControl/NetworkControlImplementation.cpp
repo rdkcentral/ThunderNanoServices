@@ -940,7 +940,7 @@ namespace Plugin
             }
 
             if (networksInfo.empty() != true) {
-                networks = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<Exchange::INetworkControl::INetworkInfoIterator>(std::move(networksInfo));
+                networks = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<NetworkInfoIteratorImplementation>(std::move(networksInfo));
             }
             _adminLock.Unlock();
 
