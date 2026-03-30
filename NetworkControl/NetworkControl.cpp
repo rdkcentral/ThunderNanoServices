@@ -342,7 +342,8 @@ namespace Plugin
                     while (dns.Next() == true) {
                         elements.push_back(dns.Current());
                     }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(elements)};
+                    using DnsIterImpl = RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>, std::vector<string>>;
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::ServiceType<DnsIterImpl>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(std::move(elements))};
 
                     status = _networkControl->DNS(static_cast<Exchange::INetworkControl::IStringIterator* const&>(dnsList));
                     dnsList->Release();
@@ -368,7 +369,8 @@ namespace Plugin
                     while (network.Next() == true) {
                         elements.push_back(network.Current());
                     }
-                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(elements)};
+                    using NetworkIterImpl = RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>, std::vector<Exchange::INetworkControl::NetworkInfo>>;
+                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::ServiceType<NetworkIterImpl>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(std::move(elements))};
 
                     status = _networkControl->Network(interface, static_cast<Exchange::INetworkControl::INetworkInfoIterator* const&>(networkList));
                     networkList->Release();

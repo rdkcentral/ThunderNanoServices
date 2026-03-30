@@ -659,8 +659,8 @@ namespace Plugin
         using RequiredSets = std::vector<string>;
         using Networks = std::unordered_map<string, DHCPEngine>;
         using Notifications = std::vector<Exchange::INetworkControl::INotification*>;
-        using StringList = RPC::IteratorType<Exchange::INetworkControl::IStringIterator>;
-        using NetworkInfoIteratorImplementation = RPC::IteratorType<Exchange::INetworkControl::INetworkInfoIterator>;
+        using StringList = RPC::IteratorType<Exchange::INetworkControl::IStringIterator, std::vector<string>>;
+        using NetworkInfoIteratorImplementation = RPC::IteratorType<Exchange::INetworkControl::INetworkInfoIterator, std::vector<Exchange::INetworkControl::NetworkInfo>>;
 
     public:
         NetworkControlImplementation(NetworkControlImplementation&&) = delete;
@@ -837,7 +837,7 @@ namespace Plugin
             Interfaces(interfaceList);
 
             if (interfaceList.empty() != true) {
-                interfaces = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(interfaceList);
+                interfaces = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(std::move(interfaceList));
                 result = Core::ERROR_NONE;
             }
              
@@ -940,7 +940,7 @@ namespace Plugin
             }
 
             if (networksInfo.empty() != true) {
-                networks = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<NetworkInfoIteratorImplementation>(networksInfo);
+                networks = Core::ServiceType<NetworkInfoIteratorImplementation>::Create<Exchange::INetworkControl::INetworkInfoIterator>(std::move(networksInfo));
             }
             _adminLock.Unlock();
 
@@ -976,7 +976,7 @@ namespace Plugin
             }
 
             if (servers.empty() != true) {
-                dns = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(dnsList);
+                dns = Core::ServiceType<StringList>::Create<Exchange::INetworkControl::IStringIterator>(std::move(dnsList));
                 result = Core::ERROR_NONE;
             }
 

@@ -275,8 +275,8 @@ namespace Plugin {
         
             }
 
-            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
-            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator, std::vector<Exchange::IDictionary::PathEntry>>;
+            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(std::move(pathentries));
             
             result = Core::ERROR_NONE;
         
