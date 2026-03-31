@@ -21,12 +21,15 @@
 
 #include "Module.h"
 #include <interfaces/IInputSwitch.h>
-#include <interfaces/json/JsonData_InputSwitch.h>
+#include <interfaces/json/JInputSwitch.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class InputSwitch : public PluginHost::IPlugin, public PluginHost::IWeb, public Exchange::IInputSwitch, public PluginHost::JSONRPC {
+    class InputSwitch : public PluginHost::IPlugin
+                      , public PluginHost::IWeb
+                      , public PluginHost::JSONRPC
+                      , public Exchange::IInputSwitch {
     private:
         typedef std::list<string> ImunityList;
 
@@ -73,12 +76,10 @@ namespace Plugin {
             , _handler(nullptr)
             , _imunityList()
         {
-            RegisterAll();
         }
 
         ~InputSwitch() override
         {
-            UnregisterAll();
         }
 
         BEGIN_INTERFACE_MAP(InputSwitch)
@@ -105,17 +106,13 @@ namespace Plugin {
         RPC::IStringIterator* Consumers() const override;
         bool Consumer(const string& name) const override;
         uint32_t Consumer(const string& name, const mode value) override;
-        uint32_t Select(const string& name) override;
+
+        Core::hresult Select(const string& name) override;
+        Core::hresult Channel(const string& name, const bool enabled) override;
+        Core::hresult Status(const Core::OptionalType<string>& name, Exchange::IInputSwitch::IChannelIterator*& channels) const override;
 
     private:
         bool ChannelExists(const string& name) const;
-
-        // JsonRpc
-        void RegisterAll();
-        void UnregisterAll();
-        uint32_t endpoint_channel(const JsonData::InputSwitch::ChannelParamsInfo& params);
-        uint32_t endpoint_status(const JsonData::InputSwitch::SelectParamsInfo& params, Core::JSON::ArrayType<JsonData::InputSwitch::ChannelParamsInfo>& response);
-        uint32_t endpoint_select(const JsonData::InputSwitch::SelectParamsInfo& params);
 
     private:
         uint8_t _skipURL;
