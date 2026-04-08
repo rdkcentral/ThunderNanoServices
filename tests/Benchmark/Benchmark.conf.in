@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_BENCHMARK_STARTMODE@"
+resumed = "@PLUGIN_BENCHMARK_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_BENCHMARK_MODE@")
+configuration.add("root", root)
