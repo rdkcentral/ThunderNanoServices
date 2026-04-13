@@ -315,6 +315,8 @@ namespace Plugin {
         uint32_t SendReceiveBuffer(uint16_t& bufferSize, uint8_t buffer[]) const override
         {
             // Echo — buffer and size remain unchanged
+            (void)bufferSize;
+            (void)buffer;
             return Core::ERROR_NONE;
         }
 
