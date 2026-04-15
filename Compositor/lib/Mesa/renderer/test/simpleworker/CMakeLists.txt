@@ -24,6 +24,10 @@ find_package(${NAMESPACE}Definitions REQUIRED)
 add_library(CompositorSimpleWorker STATIC
     SimpleWorker.cpp)
 
+set_target_properties(CompositorSimpleWorker PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+    
 target_include_directories(CompositorSimpleWorker PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${NAMESPACE}>)

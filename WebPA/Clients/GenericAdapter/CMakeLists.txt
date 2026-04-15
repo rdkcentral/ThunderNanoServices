@@ -41,6 +41,10 @@ add_library(${TARGET} SHARED
     Module.cpp
 )
 
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_include_directories(${TARGET}
     PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}

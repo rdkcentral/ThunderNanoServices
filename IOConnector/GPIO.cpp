@@ -162,9 +162,9 @@ namespace GPIO
         if ((events & (POLLPRI | POLLERR)) != 0) {
 
             unsigned char buffer[1];
-
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             read(_descriptor, &buffer, sizeof(buffer));
-
+            POP_WARNING()
             // If we are only triggered on a falling edge, or a rising edge
             // the change is not detected compared to the previous value,
             // force HasChanged to be true!!
@@ -187,8 +187,9 @@ namespace GPIO
                 int fd = open(buffer, O_WRONLY);
 
                 if (fd > 0) {
-
+                    PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
                     write(fd, textMode.Data(), strlen(textMode.Data()));
+                    POP_WARNING()
                     close(fd);
                 }
             }
@@ -211,8 +212,10 @@ namespace GPIO
 
         if (_descriptor != -1) {
             uint8_t value;
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             lseek(_descriptor, 0, SEEK_SET);
             read(_descriptor, &value, 1);
+            POP_WARNING()
             result = (value != '0');
             if (_activeLow != 0) {
                 result = !result;
@@ -230,7 +233,9 @@ namespace GPIO
             } else {
                 newValue = (value ? '1' : '0');
             }
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             write(_descriptor, &newValue, 1);
+            POP_WARNING()
         }
     }
 
