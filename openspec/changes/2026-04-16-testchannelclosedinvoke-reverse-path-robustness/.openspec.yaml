@@ -1,0 +1,17 @@
+name: testchannelclosedinvoke-reverse-path-robustness
+description: >
+  Extend TestChannelClosedInvoke with reverse-path robustness coverage for
+  plugin-to-client communication during abrupt client termination, where the
+  client exposes both a service endpoint and a sink endpoint.
+status: proposed
+created: "2026-04-16"
+artifacts:
+  proposal.md:
+    type: proposal
+    status: done
+  design.md:
+    type: design
+    status: done
+  tasks.md:
+    type: tasks
+    status: done
