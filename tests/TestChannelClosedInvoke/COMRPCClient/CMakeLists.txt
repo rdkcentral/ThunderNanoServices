@@ -36,7 +36,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_executable(${MODULE_NAME} ChannelClosedClient.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD 17
         CXX_STANDARD_REQUIRED YES
         )     
 
