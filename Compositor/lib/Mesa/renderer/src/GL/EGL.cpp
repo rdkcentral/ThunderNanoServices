@@ -295,57 +295,71 @@ namespace Compositor {
 
                 EGLDeviceEXT* eglDevices = static_cast<EGLDeviceEXT*>(ALLOCA(nEglDevices * sizeof(EGLDeviceEXT)));
 
-                memset(eglDevices, 0, sizeof(nEglDevices * sizeof(EGLDeviceEXT)));
+                // FIXED: memset was wrong
+                memset(eglDevices, 0, nEglDevices * sizeof(EGLDeviceEXT));
 
                 _api.eglQueryDevicesEXT(nEglDevices, eglDevices, &nEglDevices);
 
                 if (nEglDevices > 0) {
-                    drmDevice* drmDevice = nullptr;
-                    int ret = drmGetDevice(drmFd, &drmDevice);
+                    drmDevice* drmDev = nullptr;
+                    int ret = drmGetDevice(drmFd, &drmDev);
 
-                    if ((ret == 0) && (drmDevice != nullptr)) {
+                    if ((ret == 0) && (drmDev != nullptr)) {
                         for (int i = 0; i < nEglDevices; i++) {
-                            TRACE(Trace::EGL, ("Trying device %d [%p]", i, eglDevices[i]));
+
+                            EGLDeviceEXT dev = eglDevices[i];
+                            TRACE(Trace::EGL, ("Trying device %d [%p]", i, dev));
 
 #ifdef __DEBUG__
-                            const char* extensions = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_EXTENSIONS);
+                            const char* extensions = _api.eglQueryDeviceStringEXT(dev, EGL_EXTENSIONS);
                             if (extensions != nullptr) {
                                 TRACE(Trace::EGL, ("EGL extensions: %s", extensions));
                             }
 #endif
-                            const char* renderName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_RENDER_NODE_FILE_EXT);
 
-                            if (renderName != nullptr) {
+                            const char* renderName = _api.eglQueryDeviceStringEXT(dev, EGL_DRM_RENDER_NODE_FILE_EXT);
+
+                            const char* deviceName = _api.eglQueryDeviceStringEXT(dev, EGL_DRM_DEVICE_FILE_EXT);
+
+                            if (renderName)
                                 TRACE(Trace::EGL, ("EGL render node: %s", renderName));
-                            } else {
-                                TRACE(Trace::Error, ("No EGL render node associated to %p", eglDevices[i]));
-                            }
+                            else
+                                TRACE(Trace::Error, ("No EGL render node associated to %p", dev));
 
-                            const char* deviceName = _api.eglQueryDeviceStringEXT(eglDevices[i], EGL_DRM_DEVICE_FILE_EXT);
-                            bool nodePresent(false);
-
-                            if (deviceName == nullptr) {
-                                TRACE(Trace::Error, ("No EGL device name returned for %p", eglDevices[i]));
-                                continue;
-                            } else {
+                            if (deviceName)
                                 TRACE(Trace::EGL, ("Found EGL device %s", deviceName));
-
-                                for (uint16_t i = 0; i < DRM_NODE_MAX; i++) {
-                                    if ((drmDevice->available_nodes & (1 << i)) && (strcmp(drmDevice->nodes[i], deviceName) == 0)) {
-                                        nodePresent = true;
-                                        break;
-                                    }
-                                }
+                            else {
+                                TRACE(Trace::Error, ("No EGL device name returned for %p", dev));
+                                continue;
                             }
 
-                            if ((deviceName != nullptr) && (nodePresent == true)) {
-                                TRACE(Trace::EGL, ("Using EGL device %s", deviceName));
-                                result = eglDevices[i];
+                            bool renderMatch = false;
+                            bool primaryMatch = false;
+
+                            // Prefer matching render node
+                            if (renderName && (drmDev->available_nodes & (1 << DRM_NODE_RENDER)) && strcmp(drmDev->nodes[DRM_NODE_RENDER], renderName) == 0) {
+                                renderMatch = true;
+                            }
+
+                            // Then fallback to primary node
+                            if (deviceName && (drmDev->available_nodes & (1 << DRM_NODE_PRIMARY)) && strcmp(drmDev->nodes[DRM_NODE_PRIMARY], deviceName) == 0) {
+                                primaryMatch = true;
+                            }
+
+                            if (renderMatch) {
+                                TRACE(Trace::EGL, ("Using EGL device (render node): %s", renderName));
+                                result = dev;
+                                break;
+                            }
+
+                            if (primaryMatch) {
+                                TRACE(Trace::EGL, ("Using EGL device (primary node fallback): %s", deviceName));
+                                result = dev;
                                 break;
                             }
                         }
 
-                        drmFreeDevice(&drmDevice);
+                        drmFreeDevice(&drmDev);
                     } else {
                         TRACE(Trace::Error, ("No DRM devices found"));
                     }

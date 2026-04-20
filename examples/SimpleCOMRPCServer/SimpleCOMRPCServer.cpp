@@ -41,7 +41,7 @@ private:
                 Notifier(const uint16_t period, Exchange::IWallClock::ICallback* callback)
                     : _period(period)
                     , _ticks(Core::Time::Now().Add(_period * 1000).Ticks())
-                    , _callback(_callback) {
+                    , _callback(callback) {
                     _callback->AddRef();
                 }
                 ~Notifier() {
@@ -242,7 +242,7 @@ public:
     }
 
 private:
-    void* Acquire(const string& className, const uint32_t interfaceId, const uint32_t versionId) override
+    void* Acquire(const string& /* className */, const uint32_t interfaceId, const uint32_t versionId) override
     {
         void* result = nullptr;
 

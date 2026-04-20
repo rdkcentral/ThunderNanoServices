@@ -20,6 +20,7 @@
 // WebConsole.cpp : Defines the entry point for the console application.
 //
 
+#include "Module.h"
 #include "Protocols.h"
 
 using namespace Thunder;

@@ -18,13 +18,14 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 set (PLUGIN_TEST_TESTSERVER_SOURCES
         testserver.cpp
+        Module.cpp
         DataContainer.cpp
 )
 
 add_executable(${MODULE_NAME} ${PLUGIN_TEST_TESTSERVER_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES)
 
 target_link_libraries(${MODULE_NAME}

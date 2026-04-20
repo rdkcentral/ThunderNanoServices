@@ -122,6 +122,51 @@ namespace Compositor {
                 EGLSurface _readSurface;
             };
 
+            void DestroySync(EGLSync& sync) const
+            {
+                if (sync != EGL_NO_SYNC && _api.eglDestroySync != nullptr) {
+                    _api.eglDestroySync(_display, sync);
+                    sync = EGL_NO_SYNC;
+                }
+            }
+
+            EGLSync CreateSync() const
+            {
+                EGLSync sync = EGL_NO_SYNC;
+
+                if (_api.eglCreateSync != nullptr) {
+                    sync = _api.eglCreateSync(_display, EGL_SYNC_FENCE, nullptr);
+                }
+
+                return sync;
+            }
+
+            EGLint WaitSync(EGLSync& sync, const EGLTime timeoutNs = EGL_FOREVER) const
+            {
+                EGLint status = EGL_UNSIGNALED;
+
+                if (sync != EGL_NO_SYNC && _api.eglWaitSync != nullptr) {
+                    status = _api.eglClientWaitSync(_display, sync, EGL_SYNC_FLUSH_COMMANDS_BIT, timeoutNs);
+                }
+
+                return status;
+            }
+
+            int ExportSyncAsFd(EGLSync sync) const
+            {
+                int fd = -1;
+
+                if (sync != EGL_NO_SYNC && _api.eglDupNativeFenceFDANDROID != nullptr) {
+                    fd = _api.eglDupNativeFenceFDANDROID(_display, sync);
+
+                    if (fd < 0) {
+                        TRACE(Trace::Error, ("Failed to export sync as fd: 0x%x", eglGetError()));
+                    }
+                }
+
+                return fd;
+            }
+
         private:
             EGLDeviceEXT FindEGLDevice(const int drmFd);
             uint32_t Initialize(EGLenum platform, void* remote_display, bool isMaster);

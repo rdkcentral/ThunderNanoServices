@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(SystemdConnector)
+project(JsonRpcMuxer)
 
 cmake_minimum_required(VERSION 3.15)
 
@@ -27,9 +27,9 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
-set(PLUGIN_SYSTEMDCONNECTOR_STARTMODE "Activated" CACHE STRING "Automatically start SystemdConnector plugin")
+set(PLUGIN_JSONRPCMUXER_STARTMODE "Activated" CACHE STRING "Automatically start JsonRpcMuxer plugin")
+set(PLUGIN_JSONRPCMUXER_MAX_CONCURRENT_JOBS 0 CACHE STRING "Maximum number of concurrent WorkerPool jobs")
+set(PLUGIN_JSONRPCMUXER_MAX_BATCH_SIZE 0 CACHE STRING "Maximum requests per batch")
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -37,21 +37,25 @@ endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
-find_package(Systemd REQUIRED)
 
 add_library(${MODULE_NAME} SHARED 
-    SystemdConnector.cpp
+    JsonRpcMuxer.cpp
     Module.cpp)
 
+target_compile_definitions(${MODULE_NAME} PRIVATE
+    PLUGIN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+    PLUGIN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    PLUGIN_VERSION_PATCH=${PROJECT_VERSION_PATCH}
+)
+
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES)
 
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
-        ${SYSTEMD_LIBRARIES})
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
 
 install(TARGETS ${MODULE_NAME} 
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)

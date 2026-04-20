@@ -148,7 +148,9 @@ namespace Plugin {
         void Kill()
         {
             const char v = 'V';
+            PUSH_WARNING(DISABLE_WARNING_UNUSED_RESULT);
             write(_watchdogFd, &v, 1);
+            POP_WARNING()
         }
 
     private:

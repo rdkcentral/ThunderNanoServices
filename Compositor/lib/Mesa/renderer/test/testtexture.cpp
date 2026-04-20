@@ -85,7 +85,7 @@ public:
         , _renderStart(std::chrono::high_resolution_clock::now())
     {
         auto renderer = Renderer();
-        _texture = renderer->Texture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
+        _texture = renderer->CreateTexture(Core::ProxyType<Exchange::IGraphicsBuffer>(textureTv));
     }
 
     virtual ~RenderTest() = default;
@@ -127,10 +127,11 @@ protected:
             Compositor::Transformation::ProjectBox(matrix, renderBox, Compositor::Transformation::TRANSFORM_FLIPPED_180, _rotation, renderer->Projection());
 
             const Exchange::IComposition::Rectangle textureBox = { 0, 0, _texture->Width(), _texture->Height() };
-            renderer->Render(_texture, textureBox, matrix, alpha);
+            renderer->Render(_texture->Identifier(), textureBox, matrix, alpha);
 
             renderer->End(false);
             renderer->Unbind(frameBuffer);
+            renderer->Finish();
 
             connector->Commit();
 

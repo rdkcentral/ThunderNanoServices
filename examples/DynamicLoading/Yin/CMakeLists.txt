@@ -49,6 +49,10 @@ add_library(${MODULE_NAME} SHARED
     Yin.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 add_dependencies(${MODULE_NAME}
     ${PLUGIN_YIN_DEFINITIONS})
 

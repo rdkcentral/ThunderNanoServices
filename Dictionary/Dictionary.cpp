@@ -196,7 +196,7 @@ namespace Plugin {
             
         if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
 
-            std::list<Exchange::IDictionary::PathEntry> pathentries;
+            std::vector<Exchange::IDictionary::PathEntry> pathentries;
 
             if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
@@ -275,8 +275,8 @@ namespace Plugin {
         
             }
 
-            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
-            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator, std::vector<Exchange::IDictionary::PathEntry>>;
+            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(std::move(pathentries));
             
             result = Core::ERROR_NONE;
         
@@ -288,19 +288,39 @@ namespace Plugin {
             return (result);
     }
 
+    bool Dictionary::IsUnderRegisteredNamespace(const string& registeredPath, const string& changedPath) const
+    {
+        const string& delimiter = Delimiter(); 
+
+        bool result = false;
+
+        if (registeredPath == delimiter) {
+            result = true;
+        } else if (changedPath.compare(0, registeredPath.size(), registeredPath) == 0) {
+            if (changedPath.size() == registeredPath.size()) {
+                result = true;
+            } else if (changedPath.at(registeredPath.size()) == delimiter[0]) {
+                result = true;
+            }
+        }
+
+        return result;
+    }
 
     void Dictionary::NotifyForUpdate(const string& path, const string& key, const string& value) const
     {
         ObserverMap::const_iterator index(_observers.cbegin());
 
         while (index != _observers.cend()) {
-            if (index->first == path) {
+            if (IsUnderRegisteredNamespace(index->first, path)) {
                 index->second->Modified(path, key, value);
             }
             index++;
         }
 
-        Exchange::JDictionary::Event::Modified(*this, path, key, value);
+        Exchange::JDictionary::Event::Modified(*this, path, key, value, [&path, this](const string&, const string& index_) -> bool {
+            return (this->IsUnderRegisteredNamespace(index_, path));
+        });
     }
 
     // Direct method to Set a value for a key in a certain namespace from the dictionary.

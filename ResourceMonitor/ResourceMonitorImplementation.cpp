@@ -145,7 +145,7 @@ namespace Plugin {
                 _logfile.Append("Time[s]", "Name", "USS[KiB]", "PSS[KiB]", "RSS[KiB]", "VSS[KiB]", "UserTotalCPU[%]", "SystemTotalCPU[%]");
 
                 if (config.FilterNames.Elements().Count() == 0) {
-                    _filterNames.push_back("WPE");
+                    _filterNames.push_back("Thunder");
                 } else {
                     auto filterIterator(config.FilterNames.Elements());
                     while (filterIterator.Next()) {
