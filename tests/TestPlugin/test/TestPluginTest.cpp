@@ -337,7 +337,7 @@ namespace Tests {
         string receivedParams;
         bool eventFired = false;
 
-        uint32_t result = link->Subscribe("ongreeting", [&](const string& params) {
+        uint32_t result = link->Subscribe("onGreeting", [&](const string& params) {
             std::lock_guard<std::mutex> lock(mtx);
             receivedParams = params;
             eventFired = true;
@@ -358,7 +358,7 @@ namespace Tests {
                 << "event params: " << receivedParams;
         }
 
-        link->Unsubscribe("ongreeting");
+        link->Unsubscribe("onGreeting");
         delete link;
     }
 
@@ -371,14 +371,14 @@ namespace Tests {
         std::condition_variable cv;
         bool eventFired = false;
 
-        uint32_t result = link->Subscribe("ongreeting", [&](const string& params) {
+        uint32_t result = link->Subscribe("onGreeting", [&](const string& params) {
             std::lock_guard<std::mutex> lock(mtx);
             eventFired = true;
             cv.notify_one();
         });
         EXPECT_EQ(result, Core::ERROR_NONE);
 
-        link->Unsubscribe("ongreeting");
+        link->Unsubscribe("onGreeting");
 
         // Trigger the event — should NOT be received
         string response;
