@@ -1,8 +1,14 @@
 find_package(thunder_test_support QUIET)
+find_package(thunder_test_main QUIET)
 find_package(GTest QUIET)
 
 if(NOT thunder_test_support_FOUND)
     message(STATUS "thunder_test_support not found — skipping TestPlugin integration test")
+    return()
+endif()
+
+if(NOT thunder_test_main_FOUND)
+    message(STATUS "thunder_test_main not found — skipping TestPlugin integration test")
     return()
 endif()
 
@@ -35,8 +41,8 @@ target_compile_definitions(${TARGET}
 target_link_libraries(${TARGET}
     PRIVATE
         thunder_test_support::thunder_test_support
+        thunder_test_main::thunder_test_main
         GTest::GTest
-        GTest::Main
 )
 
 set_target_properties(${TARGET} PROPERTIES
