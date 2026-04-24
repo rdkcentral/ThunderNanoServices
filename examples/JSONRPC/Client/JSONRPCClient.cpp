@@ -573,10 +573,10 @@ int main(int argc, char** argv)
         // 3. [optional]  should the websocket under the hood call directly the plugin
         //                or will it be rlayed through thejsonrpc dispatcher (default,
         //                use jsonrpc dispatcher)
-        JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("client.events.33"));
-        JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        JSONRPC::LinkType<Core::JSON::IElement> remoteObjectElement(_T("JSONRPCPlugin.2"), _T("client.events.88"));
-        JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("client.events.88"));
+        JSONRPC::LinkType<Core::JSON::IElement> legacyObject(_T("JSONRPCPlugin.1"), _T("xxx"));
+        JSONRPC::LinkType<Core::JSON::IElement> remoteObject(_T("JSONRPCPlugin.2"), _T("zzz"));
+        JSONRPC::LinkType<Core::JSON::IElement> remoteObjectElement(_T("JSONRPCPlugin.2"), _T("zzz"));
+        JSONRPC::LinkType<Core::JSON::IMessagePack> remoteObjectMP(_T("JSONRPCPlugin.2"), _T("zzz"));
         Handlers::MessageHandler testMessageHandlerJohn("john");
         Handlers::MessageHandler testMessageHandlerJames("james");
 

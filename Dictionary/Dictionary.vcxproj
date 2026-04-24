@@ -115,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;SECURITYOFFICER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(ContractsPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -133,7 +133,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;SECURITYOFFICER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(ContractsPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -153,7 +153,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;SECURITYOFFICER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(ContractsPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -175,7 +175,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(ContractsPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
