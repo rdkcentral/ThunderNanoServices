@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -127,7 +127,7 @@
       <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
+      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(ContractsPath) -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
       <Message>Create ProxyStub code</Message>
     </PreBuildEvent>
     <PostBuildEvent>
@@ -143,7 +143,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN32;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -152,7 +152,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
+      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(ContractsPath) -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
       <Message>Create ProxyStub code</Message>
     </PreBuildEvent>
     <PostBuildEvent>
@@ -168,7 +168,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;_DEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -177,7 +177,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
+      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(ContractsPath) -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
       <Message>Create ProxyStub code</Message>
     </PreBuildEvent>
     <PostBuildEvent>
@@ -195,7 +195,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>SIMPLECOMRPCINTERFACE_EXPORTS;_CRT_SECURE_NO_WARNINGS;WIN32;NDEBUG;PROXYSTUBS_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ContractsPath);$(FrameworkPath);$(WindowsPath);$(WindowsPath)zlib</AdditionalIncludeDirectories>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
     </ClCompile>
     <Link>
@@ -206,7 +206,7 @@ copy $(TargetPath) $(OutDir)PS</Command>
       <AdditionalLibraryDirectories>$(SolutionDir)..\artifacts\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
-      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
+      <Command>python "$(ToolPath)\ProxyStubGenerator\StubGenerator.py" -I $(ContractsPath) -I $(FrameworkPath) -I $(ProjectDir) "$(ProjectDir)."</Command>
       <Message>Create ProxyStub code</Message>
     </PreBuildEvent>
     <PostBuildEvent>

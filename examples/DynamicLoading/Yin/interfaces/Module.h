@@ -25,7 +25,7 @@
 
 #include <core/core.h>
 
-#include <plugins/IPlugin.h>
-#include <plugins/ISubSystem.h>
-#include <plugins/IShell.h>
-#include <plugins/IStateControl.h>
+#include <interfaces/IPlugin.h>
+#include <interfaces/ISubSystem.h>
+#include <interfaces/IShell.h>
+#include <interfaces/IStateControl.h>
