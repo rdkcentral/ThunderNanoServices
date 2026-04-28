@@ -102,7 +102,7 @@ namespace Plugin {
             #ifdef __WINDOWS__
                 , Connector("127.0.0.1:62010")
             #else
-                , Connector("/tmp/ChannelCloseInvoke")
+                , Connector("/tmp/ChannelClosedInvoke")
             #endif
             {
                 Add(_T("connector"), &Connector);

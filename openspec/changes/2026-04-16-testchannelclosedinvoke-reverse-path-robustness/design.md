@@ -54,6 +54,7 @@ Validation should be run in both debug and release builds to cover build-mode di
 - Maintain strict Initialize/Deinitialize symmetry for all registrations and endpoint wiring.
 - Ensure every register/addref has a matching unregister/release.
 - Teardown order must be safe for in-flight callbacks; unregister sink-like paths before destroying state they access.
+- In crash-recovery reasoning, treat composite/embedded endpoints as owner-lifetime objects: do not model cleanup as forced release of contained composite members; model cleanup at the owning container lifetime boundary.
 
 ## Logging and Assertion Guardrails
 

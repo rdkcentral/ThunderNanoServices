@@ -41,15 +41,32 @@ Assumption: ThunderNanoServices-specific architecture brief/SME notes are not cu
 
 ## Success Criteria
 
-- [ ] Existing forward-path test scenario remains operational and unchanged in intent.
-- [ ] New reverse-path scenario exists and exercises plugin-originated calls to both client service and sink endpoints.
-- [ ] Abrupt client termination occurs while reverse-path traffic is active.
-- [ ] Framework process remains alive after crash event.
-- [ ] Plugin remains active/responding after crash event.
-- [ ] No deadlock/stall is observed in communication handling.
-- [ ] Cleanup completes without fatal errors.
-- [ ] Logs/assertions clearly show reverse-path pass/fail.
-- [ ] Validation is executed in both debug and release builds for meaningful robustness coverage.
+- [x] Existing forward-path test scenario remains operational and unchanged in intent.
+- [x] New reverse-path scenario exists and exercises plugin-originated calls to both client service and sink endpoints.
+- [x] Abrupt client termination occurs while reverse-path traffic is active.
+- [x] Framework process remains alive after crash event.
+- [x] Plugin remains active/responding after crash event.
+- [x] No deadlock/stall is observed in communication handling.
+- [x] Cleanup completes without fatal errors.
+- [x] Logs/assertions clearly show reverse-path pass/fail.
+- [x] Validation is executed in both debug and release builds for meaningful robustness coverage.
+
+> Implementation complete 2026-04-20. Debug build confirmed. Runtime execution with Thunder daemon + plugin completed and revalidated.
+
+> Runtime outcome (2026-04-20, manual):
+> - Forward legacy path (`T`): executed; client abort behavior observed; framework liveness confirmed by successful post-abort probe.
+> - OWNERSHIP (`N`): PASS.
+> - CRASH (`C`): PASS (`child terminated by signal=6 (Aborted)`, `child termination expected SIGABRT: yes`, `framework alive after composite crash window: yes`, `RESULT: PASS`).
+> - Additional operational note: pressing `Q` exits `ChannelClosedClient` only; Thunder daemon must be stopped separately.
+
+> Runtime outcome update (2026-04-21, manual):
+> - Clean reruns confirmed in both Debug and Release.
+> - OWNERSHIP (`N`): PASS.
+> - CRASH (`C`): PASS.
+> - Legacy path (`T`): expected abort behavior observed.
+> - Thunder daemon liveness remained stable across the run (same PID before/after in user-confirmed validation).
+
+> Clean rebuild baseline validated 2026-04-20 from an empty `/mnt/Artefacts/Copilot/Debug` tree using dependency order: ThunderTools -> Thunder -> ThunderInterfaces -> ThunderNanoServices.
 
 ## Future Refinement
 
