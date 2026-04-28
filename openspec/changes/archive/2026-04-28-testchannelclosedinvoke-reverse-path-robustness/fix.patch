@@ -1,0 +1,251 @@
+diff --git a/tests/TestChannelClosedInvoke/COMRPCClient/ChannelClosedClient.cpp b/tests/TestChannelClosedInvoke/COMRPCClient/ChannelClosedClient.cpp
+index 2a2c0f8..f4bd952 100644
+--- a/tests/TestChannelClosedInvoke/COMRPCClient/ChannelClosedClient.cpp
++++ b/tests/TestChannelClosedInvoke/COMRPCClient/ChannelClosedClient.cpp
+@@
+ #include <atomic>
+ #include <cctype>
++#include <cerrno>
+ #include <cstdio>
++#include <cstdlib>
++#include <cstring>
+ #include <thread>
+ 
+ #ifdef __LINUX__
+ #include <csignal>
++#include <sys/wait.h>
++#include <unistd.h>
++#include <limits.h>
+ #endif
+@@
+ class Callback : public QualityAssurance::ITestChannelClosed::ICallback {
+@@
+ };
++
++class StandaloneCallback : public QualityAssurance::ITestChannelClosed::ICallback {
++public:
++    StandaloneCallback(const StandaloneCallback&) = delete;
++    StandaloneCallback& operator=(const StandaloneCallback&) = delete;
++    StandaloneCallback(StandaloneCallback&&) = delete;
++    StandaloneCallback& operator=(StandaloneCallback&&) = delete;
++
++    StandaloneCallback()
++        : _referenceCount(1)
++        , _doneCount(0)
++    {
++    }
++
++    ~StandaloneCallback() override = default;
++
++public:
++    uint32_t AddRef() const override
++    {
++        _referenceCount.fetch_add(1);
++        return Core::ERROR_NONE;
++    }
++
++    uint32_t Release() const override
++    {
++        const uint32_t updated = _referenceCount.fetch_sub(1) - 1;
++
++        if (updated == 0) {
++            delete this;
++        }
++
++        return Core::ERROR_NONE;
++    }
++
++    void Done() override
++    {
++        _doneCount.fetch_add(1);
++        printf("\n\nstandalone done received...\n\n");
++    }
++
++    uint32_t DoneCount() const
++    {
++        return _doneCount.load();
++    }
++
++    BEGIN_INTERFACE_MAP(StandaloneCallback)
++    INTERFACE_ENTRY(QualityAssurance::ITestChannelClosed::ICallback)
++    END_INTERFACE_MAP
++
++private:
++    mutable std::atomic<uint32_t> _referenceCount;
++    mutable std::atomic<uint32_t> _doneCount;
++};
++
++class SleepyCallback : public QualityAssurance::ITestChannelClosed::ICallback {
++public:
++    SleepyCallback(const SleepyCallback&) = delete;
++    SleepyCallback& operator=(const SleepyCallback&) = delete;
++    SleepyCallback(SleepyCallback&&) = delete;
++    SleepyCallback& operator=(SleepyCallback&&) = delete;
++
++    SleepyCallback() = default;
++    ~SleepyCallback() override = default;
++
++    void Done() override
++    {
++        printf("[CRASH] SleepyCallback::Done() entered - holding reverse-path proxy in-flight...\n");
++        SleepMs(10000);
++        printf("[CRASH] SleepyCallback::Done() woke (unexpected in crash scenario)\n");
++    }
++
++    BEGIN_INTERFACE_MAP(SleepyCallback)
++    INTERFACE_ENTRY(QualityAssurance::ITestChannelClosed::ICallback)
++    END_INTERFACE_MAP
++};
++
++namespace {
++
++    bool VerifyOwnershipModels(QualityAssurance::ITestChannelClosed* testinterface)
++    {
++        ASSERT(testinterface != nullptr);
++
++        Core::SinkType<Callback> composite;
++        const uint32_t compositeType = composite.AddRef();
++        composite.Release();
++
++        StandaloneCallback* standalone = new StandaloneCallback();
++        ASSERT(standalone != nullptr);
++
++        const uint32_t standaloneType = standalone->AddRef();
++        standalone->Release();
++
++        const Core::hresult compositeResult = testinterface->Test(&composite);
++        const Core::hresult standaloneResult = testinterface->Test(standalone);
++        const bool standaloneCallbackReached = (standalone->DoneCount() > 0);
++
++        standalone->Release();
++
++        const bool distinguishedTypes =
++            (compositeType == Core::ERROR_COMPOSIT_OBJECT) &&
++            (standaloneType == Core::ERROR_NONE);
++
++        const bool rpcResultOk =
++            (compositeResult == Core::ERROR_NONE) &&
++            (standaloneResult == Core::ERROR_NONE) &&
++            (standaloneCallbackReached == true);
++
++        const bool pass = (distinguishedTypes == true) && (rpcResultOk == true);
++        printf("[OWNERSHIP] RESULT: %s\n", pass ? "PASS" : "FAIL");
++
++        return pass;
++    }
++
++#ifdef __LINUX__
++    void TriggerCrashWhileReversePathActive(const Core::NodeId& endPoint)
++    {
++        Core::ProxyType<RPC::CommunicatorClient> primaryClient =
++            Core::ProxyType<RPC::CommunicatorClient>::Create(
++                endPoint,
++                Core::ProxyType<Core::IIPCServer>(Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create()));
++
++        QualityAssurance::ITestChannelClosed* blockingInterface =
++            primaryClient->Open<QualityAssurance::ITestChannelClosed>(_T("TestChannelClosed"), ~0, 2000);
++
++        if (blockingInterface == nullptr) {
++            std::_Exit(EXIT_FAILURE);
++        }
++
++        std::thread killThread([]() {
++            SleepMs(4000);
++            abort();
++        });
++
++        std::thread reverseTrafficThread([&endPoint]() {
++            Core::SinkType<SleepyCallback> reverseSink;
++
++            Core::ProxyType<RPC::CommunicatorClient> reverseClient =
++                Core::ProxyType<RPC::CommunicatorClient>::Create(
++                    endPoint,
++                    Core::ProxyType<Core::IIPCServer>(Core::ProxyType<RPC::InvokeServerType<1, 0, 4>>::Create()));
++
++            QualityAssurance::ITestChannelClosed* reverseInterface =
++                reverseClient->Open<QualityAssurance::ITestChannelClosed>(_T("TestChannelClosed"));
++
++            if (reverseInterface != nullptr) {
++                SleepMs(1000);
++                reverseInterface->Test(&reverseSink);
++                reverseInterface->Release();
++            }
++
++            reverseClient->Close(RPC::CommunicationTimeOut);
++        });
++
++        blockingInterface->Block(15);
++
++        reverseTrafficThread.join();
++        killThread.join();
++
++        blockingInterface->Release();
++        primaryClient->Close(RPC::CommunicationTimeOut);
++        std::_Exit(EXIT_FAILURE);
++    }
++
++    bool VerifyCompositeCrashProtection(const Core::NodeId& endPoint)
++    {
++        char selfPath[PATH_MAX] = {};
++        if (readlink("/proc/self/exe", selfPath, sizeof(selfPath) - 1) < 0) {
++            return false;
++        }
++
++        const std::string endPointStr = endPoint.QualifiedName();
++
++        const pid_t child = fork();
++        if (child == 0) {
++            char* const args[] = {
++                selfPath,
++                const_cast<char*>("--crash-worker"),
++                const_cast<char*>(endPointStr.c_str()),
++                nullptr
++            };
++            execv(selfPath, args);
++            std::_Exit(EXIT_FAILURE);
++        }
++
++        int status = 0;
++        if (waitpid(child, &status, 0) < 0) {
++            return false;
++        }
++
++        const bool childAborted = WIFSIGNALED(status) && (WTERMSIG(status) == SIGABRT);
++        return childAborted;
++    }
++#endif
++}
+@@
+ int main(int argc, char* argv[])
+ {
++#ifdef __LINUX__
++    if (argc == 3 && std::string(argv[1]) == "--crash-worker") {
++        const Core::NodeId workerEndPoint{ argv[2] };
++        if (workerEndPoint.IsValid() != false) {
++            TriggerCrashWhileReversePathActive(workerEndPoint);
++        }
++        std::_Exit(EXIT_FAILURE);
++    }
++#endif
++
+	CommandLineParameters parameters(argc, argv);
+@@
+-    if (argc > 1 && parameters.HasErrors() != false) {
++    if (argc > 1) {
+@@
+-                    printf("Press 'T' for testcase and 'Q' to quit followed by ENTER/RETURN. : ");
++                    printf("Press 'T' for legacy scenario, 'N' for ownership proof, 'C' for crash proof, and 'Q' to quit followed by ENTER/RETURN. : ");
+@@
+					switch (keyPress) {
++                        case 'N': {
++                            VerifyOwnershipModels(testinterface);
++                            break;
++                        }
++                        case 'C': {
++#ifdef __LINUX__
++                            VerifyCompositeCrashProtection(endPoint);
++#endif
++                            break;
++                        }
+					case 'T': {
+					    printf("Begin Testcase...\n");

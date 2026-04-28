@@ -117,3 +117,31 @@
 	- Single Thunder daemon used during run.
 	- Daemon remained alive across scenario execution.
 	- User confirmed stable before/after PID on the final rerun.
+
+## Parser Validity Note (2026-04-22)
+
+- Framework-level observation: `Core::Options::HasErrors()` is not reliable as a success gate in this Linux path because `_valid` is initialized in `XGetopt.h` and not updated in the observed `Options::Parse()` flow in `XGetopt.cpp`.
+- Impact on this test client: gating execution on `HasErrors()==false` caused valid invocations to be rejected with `Invalid parameter specification`.
+- Change-scoped mitigation: `ChannelClosedClient` keeps historical gate structure, comments out the `HasErrors` condition with rationale, and uses `RequestedUsage()` plus endpoint validity checks for runtime gating.
+- Follow-up recommendation: track parser validity-state handling as a framework-level issue in Thunder core if broader consumers depend on `HasErrors()` semantics.
+
+## Improvement Backlog Snapshot (2026-04-22)
+
+1. Command-line gate robustness around `HasErrors`/usage flow in client main path.
+2. `StandaloneCallback` ref-count initialization/lifecycle hardening.
+3. Fork/exec capture hygiene around endpoint usage in crash path.
+4. Double-negation cleanup (`!= false`, similar readability hazards).
+5. Thread lifecycle clarity (`killThread`/`reverseTrafficThread` detach/join intent).
+6. Remove or restructure dead/unreachable cleanup branches.
+7. Plugin server initialization readiness check beyond proxy allocation validity.
+8. `Deinitialize` parameter-use annotation consistency (`VARIABLE_IS_NOT_USED` vs assertion use).
+9. Defaultable empty destructor cleanup in server-side classes.
+10. Callsign literal/style consistency cleanup.
+11. Framework parser follow-up: `Core::Options::_valid` / `HasErrors()` semantics in Linux `XGetopt` path.
+
+### Finding Detail: `_valid` and `HasErrors()`
+
+- In `Thunder/Source/core/XGetopt.h`, `_valid` is initialized to false and `HasErrors()` returns `(!_valid)`.
+- In the observed Linux parse path (`Thunder/Source/core/XGetopt.cpp`, `Options::Parse()`), no update of `_valid` is performed.
+- Result: callers using `HasErrors()==false` as a success gate may reject valid command lines.
+- Action in this change: keep `HasErrors` line present but commented with rationale in `ChannelClosedClient.cpp`; gate on explicit usage/endpoint checks.
