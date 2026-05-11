@@ -172,7 +172,7 @@ namespace Tests {
         EXPECT_EQ(result, Core::ERROR_NONE);
         EXPECT_NE(response.find("linked"), string::npos) << "response: " << response;
 
-        delete link;
+        link->Release();
     }
 
     TEST_F(TestPluginTest, JSONRPC_GreetViaLink)
@@ -185,7 +185,7 @@ namespace Tests {
         EXPECT_EQ(result, Core::ERROR_NONE);
         EXPECT_NE(response.find("Hello, Link!"), string::npos) << "response: " << response;
 
-        delete link;
+        link->Release();
     }
 
     // ==================================================================
@@ -360,7 +360,7 @@ namespace Tests {
         }
 
         link->Unsubscribe("onGreeting");
-        delete link;
+        link->Release();
     }
 
     TEST_F(TestPluginTest, JSONRPC_NoEventAfterUnsubscribe)
@@ -391,7 +391,7 @@ namespace Tests {
             EXPECT_FALSE(received) << "JSON-RPC event received after Unsubscribe";
         }
 
-        delete link;
+        link->Release();
     }
 
 } // namespace Tests

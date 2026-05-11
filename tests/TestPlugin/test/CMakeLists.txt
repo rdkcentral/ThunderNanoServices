@@ -28,9 +28,12 @@ add_executable(${TARGET}
 target_compile_definitions(${TARGET}
     PRIVATE
         MODULE_NAME=TestPluginTest
-        BUILD_REFERENCE=${BUILD_REFERENCE}
         TEST_PLUGIN_PATH="${TEST_PLUGIN_PATH}"
 )
+
+if(BUILD_REFERENCE)
+    target_compile_definitions(${TARGET} PRIVATE BUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
 
 target_link_libraries(${TARGET}
     PRIVATE
