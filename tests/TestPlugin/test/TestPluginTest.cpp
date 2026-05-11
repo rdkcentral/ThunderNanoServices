@@ -14,6 +14,7 @@
 #include <test_support/ThunderTestRuntime.h>
 #include <qa_interfaces/ITestPlugin.h>
 #include <gtest/gtest.h>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
 #include <string>
@@ -204,10 +205,10 @@ namespace Tests {
             _cv.notify_one();
         }
 
-        bool WaitForEvent(uint32_t timeoutMs = 2000)
+        bool WaitForEvent(uint32_t timeoutMs = 2000, uint32_t expectedCount = 1)
         {
             std::unique_lock<std::mutex> lock(_mutex);
-            return _cv.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this] { return _count > 0; });
+            return _cv.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this, expectedCount] { return _count >= expectedCount; });
         }
 
         string LastMessage()
@@ -312,8 +313,8 @@ namespace Tests {
         iface->Greet("Two", message);
         iface->Greet("Three", message);
 
-        // Wait for at least some events, then check count
-        sink.WaitForEvent();
+        // Wait for all 3 events before asserting
+        EXPECT_TRUE(sink.WaitForEvent(2000, 3)) << "Not all notifications received within timeout";
         EXPECT_EQ(sink.Count(), 3u);
         EXPECT_EQ(sink.LastMessage(), "Hello, Three!");
 

@@ -21,6 +21,7 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         _service = service;
+        _service->AddRef();
 
         QualityAssurance::JTestPlugin::Register(*this, this);
 
@@ -30,6 +31,17 @@ namespace Plugin {
     void TestPlugin::Deinitialize(PluginHost::IShell* /* service */)
     {
         QualityAssurance::JTestPlugin::Unregister(*this);
+
+        _adminLock.Lock();
+        for (auto* notification : _notifications) {
+            if (notification != nullptr) {
+                 notification->Release();
+             }
+        }
+        _notifications.clear();
+        _adminLock.Unlock();
+
+        _service->Release();
         _service = nullptr;
     }
 
@@ -80,11 +92,20 @@ namespace Plugin {
 
     void TestPlugin::NotifyGreeting(const string& message)
     {
+        std::vector<QualityAssurance::ITestPlugin::INotification*> notifications;
+
         _adminLock.Lock();
-        for (auto* notification : _notifications) {
-            notification->OnGreeting(message);
+        notifications = _notifications;
+        for (auto* notification : notifications) {
+            notification->AddRef();
         }
         _adminLock.Unlock();
+
+        for (auto* notification : notifications) {
+            notification->OnGreeting(message);
+            notification->Release();
+        }
+
         QualityAssurance::JTestPlugin::Event::OnGreeting(*this, message);
     }
 
