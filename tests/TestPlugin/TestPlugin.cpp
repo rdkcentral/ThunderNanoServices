@@ -24,7 +24,7 @@ namespace Plugin {
         return {};
     }
 
-    void TestPlugin::Deinitialize(PluginHost::IShell* /* service */)
+    void TestPlugin::Deinitialize(PluginHost::IShell* service)
     {
         QualityAssurance::JTestPlugin::Unregister(*this);
 
@@ -37,8 +37,11 @@ namespace Plugin {
         _notifications.clear();
         _adminLock.Unlock();
 
-        _service->Release();
-        _service = nullptr;
+        if (_service != nullptr) {
+            ASSERT(_service == service);
+            _service->Release();
+            _service = nullptr;
+        }
     }
 
     Core::hresult TestPlugin::Echo(const string& input, string& output)
