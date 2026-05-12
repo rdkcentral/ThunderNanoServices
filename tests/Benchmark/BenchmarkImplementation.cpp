@@ -71,7 +71,7 @@ namespace Plugin {
                 stats.minNs = minVal * 1000;
                 stats.avgNs = avg * 1000;
                 stats.maxNs = maxVal * 1000;
-                stats.stddevNs = static_cast<uint64_t>(std::sqrt(variance)) * 1000;
+                stats.stddevNs = static_cast<uint64_t>(std::sqrt(variance) * 1000.0);
 
                 return stats;
             }
