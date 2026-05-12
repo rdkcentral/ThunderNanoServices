@@ -22,6 +22,9 @@
 #include "Module.h"
 #include <qa_interfaces/IBenchmark.h>
 #include <interfaces/IMemory.h>
+#include <qa_interfaces/IBenchmarkPayloadCOMRPC.h>
+#include <map>
+#include <vector>
 
 namespace Thunder {
 namespace Plugin {
@@ -98,6 +101,9 @@ namespace Plugin {
             , _service(nullptr)
             , _notification(*this)
             , _benchmarkNotification(*this)
+            , _payloadProxy(nullptr)
+            , _maxLatencyDeviationPct(0.0f)
+            , _maxMemoryGrowthBytes(0)
         {
         }
 
@@ -118,6 +124,10 @@ namespace Plugin {
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
         void BenchmarkCompleted();
+        void RegisterJsonRpcHandlers();
+        void UnregisterJsonRpcHandlers();
+        void RunPayloadBenchmarks(uint32_t iterations);
+        void ApplyThresholds();
 
     private:
         QualityAssurance::IBenchmark* _benchmark;
@@ -126,6 +136,12 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;
         Core::SinkType<BenchmarkNotification> _benchmarkNotification;
+        QualityAssurance::IBenchmarkPayload* _payloadProxy;
+        mutable Core::CriticalSection _adminLock;
+        std::vector<QualityAssurance::IBenchmark::BenchmarkResult> _results;
+        std::map<string, QualityAssurance::IBenchmark::BenchmarkResult> _baselines;
+        float _maxLatencyDeviationPct;
+        uint64_t _maxMemoryGrowthBytes;
     };
 
 } // namespace Plugin
