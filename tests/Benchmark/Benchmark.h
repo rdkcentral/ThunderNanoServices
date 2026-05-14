@@ -22,7 +22,7 @@
 #include "Module.h"
 #include <qa_interfaces/IBenchmark.h>
 #include <interfaces/IMemory.h>
-#include <qa_interfaces/IBenchmarkPayloadCOMRPC.h>
+#include <qa_interfaces/IBenchmarkPayload.h>
 #include <map>
 #include <vector>
 
@@ -102,7 +102,7 @@ namespace Plugin {
             , _notification(*this)
             , _benchmarkNotification(*this)
             , _payloadProxy(nullptr)
-            , _maxLatencyDeviationPct(0.0f)
+            , _maxLatencyDeviationPct(0)
             , _maxMemoryGrowthBytes(0)
         {
         }
@@ -140,7 +140,7 @@ namespace Plugin {
         mutable Core::CriticalSection _adminLock;
         std::vector<QualityAssurance::IBenchmark::BenchmarkResult> _results;
         std::map<string, QualityAssurance::IBenchmark::BenchmarkResult> _baselines;
-        float _maxLatencyDeviationPct;
+        uint32_t _maxLatencyDeviationPct;
         uint64_t _maxMemoryGrowthBytes;
     };
 

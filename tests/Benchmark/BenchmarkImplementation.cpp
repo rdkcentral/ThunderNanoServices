@@ -19,7 +19,7 @@
 
 #include "Module.h"
 #include <qa_interfaces/IBenchmark.h>
-#include <qa_interfaces/IBenchmarkPayloadCOMRPC.h>
+#include <qa_interfaces/IBenchmarkPayload.h>
 
 #include <algorithm>
 #include <vector>
@@ -53,7 +53,7 @@ namespace Plugin {
         // IBenchmark
         // -------------------------------------------------------------------
 
-        Core::hresult Trigger(const uint32_t iterations, bool& success) override
+        Core::hresult Trigger(const uint32_t iterations) override
         {
             // Measurement is performed on the plugin shell side via the IBenchmarkPayload COM-RPC proxy.
             // This method is retained for interface compliance and notification forwarding.
@@ -69,7 +69,6 @@ namespace Plugin {
                 sink->Release();
             }
 
-            success = true;
             TRACE(Trace::Information, (_T("Benchmark Trigger called: %u iterations (measurement on shell side)"), iterations));
             return Core::ERROR_NONE;
         }
@@ -84,19 +83,19 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult Register(const IBenchmark::INotification* sink) override
+        Core::hresult Register(IBenchmark::INotification* sink) override
         {
             _adminLock.Lock();
             auto it = std::find(_notifications.begin(), _notifications.end(), sink);
             if (it == _notifications.end()) {
-                _notifications.push_back(const_cast<IBenchmark::INotification*>(sink));
+                _notifications.push_back(sink);
                 sink->AddRef();
             }
             _adminLock.Unlock();
             return Core::ERROR_NONE;
         }
 
-        Core::hresult Unregister(const IBenchmark::INotification* sink) override
+        Core::hresult Unregister(IBenchmark::INotification* sink) override
         {
             _adminLock.Lock();
             auto it = std::find(_notifications.begin(), _notifications.end(), sink);
@@ -108,10 +107,9 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SetThreshold(const float /* maxLatencyDeviationPct */, const uint64_t /* maxMemoryGrowthBytes */, bool& success) override
+        Core::hresult SetThreshold(const uint32_t /* maxLatencyDeviationPct */, const uint64_t /* maxMemoryGrowthBytes */) override
         {
             // Thresholds are managed on the plugin shell side.
-            success = true;
             return Core::ERROR_NONE;
         }
 
@@ -119,7 +117,7 @@ namespace Plugin {
         // IBenchmarkPayload — echo/loopback endpoints for COM-RPC measurement
         // -------------------------------------------------------------------
 
-        uint32_t GetPayloadTypes(IPayloadTypeIterator*& types) const override
+        Core::hresult GetPayloadTypes(IPayloadTypeIterator*& types) const override
         {
             std::vector<PayloadType> payloads = {
                 PAYLOAD_SMALL, PAYLOAD_MEDIUM, PAYLOAD_LARGE
@@ -129,75 +127,75 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendUint16(const uint16_t /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendUint32(const uint32_t /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendUint64(const uint64_t /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendBool(const bool /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendFloat(const float /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendDouble(const double /* value */) override { return Core::ERROR_NONE; }
-        uint32_t SendString(const string& /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendUint16(const uint16_t /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendUint32(const uint32_t /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendUint64(const uint64_t /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendBool(const bool /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendFloat(const float /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendDouble(const double /* value */) override { return Core::ERROR_NONE; }
+        Core::hresult SendString(const string& /* value */) override { return Core::ERROR_NONE; }
 
-        uint32_t SendSampleData(const QualityAssurance::SampleData& /* data */) override
+        Core::hresult SendSampleData(const IBenchmarkPayload::SampleData& /* data */) override
         {
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendWithNoParameters() override { return Core::ERROR_NONE; }
+        Core::hresult SendNoPayload() override { return Core::ERROR_NONE; }
 
-        uint32_t SendBuffer(const uint16_t /* bufferSize */, const uint8_t[] /* buffer */) override
+        Core::hresult SendBuffer(const uint16_t /* bufferSize */, const uint8_t[] /* buffer */) override
         {
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveUint16(const uint16_t input, uint16_t& output) const override
-        {
-            output = input;
-            return Core::ERROR_NONE;
-        }
-
-        uint32_t SendReceiveUint32(const uint32_t input, uint32_t& output) const override
+        Core::hresult SendReceiveUint16(const uint16_t input, uint16_t& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveUint64(const uint64_t input, uint64_t& output) const override
+        Core::hresult SendReceiveUint32(const uint32_t input, uint32_t& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveBool(const bool input, bool& output) const override
+        Core::hresult SendReceiveUint64(const uint64_t input, uint64_t& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveFloat(const float input, float& output) const override
+        Core::hresult SendReceiveBool(const bool input, bool& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveDouble(const double input, double& output) const override
+        Core::hresult SendReceiveFloat(const float input, float& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveString(const string& input, string& output) const override
+        Core::hresult SendReceiveDouble(const double input, double& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveSampleData(const QualityAssurance::SampleData& input, QualityAssurance::SampleData& output) const override
+        Core::hresult SendReceiveString(const string& input, string& output) const override
         {
             output = input;
             return Core::ERROR_NONE;
         }
 
-        uint32_t SendReceiveBuffer(uint16_t& bufferSize, uint8_t buffer[]) const override
+        Core::hresult SendReceiveSampleData(const IBenchmarkPayload::SampleData& input, IBenchmarkPayload::SampleData& output) const override
+        {
+            output = input;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult SendReceiveBuffer(uint16_t& bufferSize, uint8_t buffer[]) const override
         {
             // Echo — buffer and size remain unchanged
             (void)bufferSize;
@@ -205,7 +203,7 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        uint32_t Add(const uint32_t a, const uint32_t b, uint32_t& result) const override
+        Core::hresult Add(const uint32_t a, const uint32_t b, uint32_t& result) const override
         {
             result = a + b;
             return Core::ERROR_NONE;

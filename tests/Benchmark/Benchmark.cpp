@@ -290,8 +290,8 @@ namespace Plugin {
         PluginHost::JSONRPC::RegisterVersion(_T("JBenchmark"), 1, 0, 0);
 
         // Method: 'trigger' — runs benchmarks via COM-RPC proxy
-        PluginHost::JSONRPC::Register<JsonData::Benchmark::TriggerParamsData, Core::JSON::Boolean>(_T("trigger"),
-            [this](const JsonData::Benchmark::TriggerParamsData& params, Core::JSON::Boolean& success) -> uint32_t {
+        PluginHost::JSONRPC::Register<JsonData::Benchmark::TriggerParamsData, void>(_T("trigger"),
+            [this](const JsonData::Benchmark::TriggerParamsData& params) -> uint32_t {
                 if ((params.IsSet() == false) || (params.IsDataValid() == false)) {
                     return Core::ERROR_BAD_REQUEST;
                 }
@@ -310,10 +310,9 @@ namespace Plugin {
                     [](const QualityAssurance::IBenchmark::BenchmarkResult& r) { return r.passed; });
                 _adminLock.Unlock();
 
-                success = allPassed;
                 TRACE(Trace::Information, (_T("Benchmark completed: %u iterations via COM-RPC proxy"),
                     static_cast<uint32_t>(params.Iterations)));
-                return Core::ERROR_NONE;
+                return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
             });
 
         // Method: 'collectdata' — returns shell-side results
@@ -329,8 +328,8 @@ namespace Plugin {
             });
 
         // Method: 'setthreshold' — stores thresholds on the shell side
-        PluginHost::JSONRPC::Register<JsonData::Benchmark::SetThresholdParamsData, Core::JSON::Boolean>(_T("setthreshold"),
-            [this](const JsonData::Benchmark::SetThresholdParamsData& params, Core::JSON::Boolean& success) -> uint32_t {
+        PluginHost::JSONRPC::Register<JsonData::Benchmark::SetThresholdParamsData, void>(_T("setthreshold"),
+            [this](const JsonData::Benchmark::SetThresholdParamsData& params) -> uint32_t {
                 if ((params.IsSet() == false) || (params.IsDataValid() == false)) {
                     return Core::ERROR_BAD_REQUEST;
                 }
@@ -341,9 +340,8 @@ namespace Plugin {
                 _baselines.clear();
                 _adminLock.Unlock();
 
-                success = true;
-                TRACE(Trace::Information, (_T("Thresholds set: latency=%.1f%%, memory=%" PRIu64 " bytes"),
-                    static_cast<float>(params.MaxLatencyDeviationPct),
+                TRACE(Trace::Information, (_T("Thresholds set: latency=%u millipercent, memory=%" PRIu64 " bytes"),
+                    static_cast<uint32_t>(params.MaxLatencyDeviationPct),
                     static_cast<uint64_t>(params.MaxMemoryGrowthBytes)));
                 return Core::ERROR_NONE;
             });
@@ -374,20 +372,28 @@ namespace Plugin {
             _payloadProxy->SendUint64(UINT64_C(123456789));
         }));
 
+        addResult(MeasurePayloadMethod("GetPayloadTypes", iterations, [this]() {
+            QualityAssurance::IBenchmarkPayload::IPayloadTypeIterator* iter = nullptr;
+            _payloadProxy->GetPayloadTypes(iter);
+            if (iter != nullptr) {
+                iter->Release();
+            }
+        }));
+
         addResult(MeasurePayloadMethod("SendString", iterations, [this]() {
             _payloadProxy->SendString(_T("benchmark_payload_string"));
         }));
 
         addResult(MeasurePayloadMethod("SendSampleData", iterations, [this]() {
-            QualityAssurance::SampleData data;
+            QualityAssurance::IBenchmarkPayload::SampleData data;
             data.id = 1;
             data.value = 100;
             data.name = _T("sample");
             _payloadProxy->SendSampleData(data);
         }));
 
-        addResult(MeasurePayloadMethod("SendWithNoParameters", iterations, [this]() {
-            _payloadProxy->SendWithNoParameters();
+        addResult(MeasurePayloadMethod("SendNoPayload", iterations, [this]() {
+            _payloadProxy->SendNoPayload();
         }));
 
         addResult(MeasurePayloadMethod("SendReceiveUint32", iterations, [this]() {
@@ -401,11 +407,11 @@ namespace Plugin {
         }));
 
         addResult(MeasurePayloadMethod("SendReceiveSampleData", iterations, [this]() {
-            QualityAssurance::SampleData in;
+            QualityAssurance::IBenchmarkPayload::SampleData in;
             in.id = 1;
             in.value = 200;
             in.name = _T("roundtrip");
-            QualityAssurance::SampleData out;
+            QualityAssurance::IBenchmarkPayload::SampleData out;
             _payloadProxy->SendReceiveSampleData(in, out);
         }));
 
@@ -418,7 +424,7 @@ namespace Plugin {
     void Benchmark::ApplyThresholds()
     {
         _adminLock.Lock();
-        bool hasThresholds = (_maxLatencyDeviationPct > 0.0f || _maxMemoryGrowthBytes > 0);
+        bool hasThresholds = (_maxLatencyDeviationPct > 0 || _maxMemoryGrowthBytes > 0);
 
         if (hasThresholds && _baselines.empty()) {
             // First run with thresholds: store as baseline
@@ -434,16 +440,16 @@ namespace Plugin {
 
                 auto baseline = _baselines.find(r.apiName);
                 if (baseline != _baselines.end()) {
-                    // Latency check
-                    if (_maxLatencyDeviationPct > 0.0f && baseline->second.roundTrip.avgNs > 0) {
+                    // Latency check (threshold is in millipercent: 1000 = 1%)
+                    if (_maxLatencyDeviationPct > 0 && baseline->second.roundTrip.avgNs > 0) {
                         double baselineAvg = static_cast<double>(baseline->second.roundTrip.avgNs);
                         double currentAvg = static_cast<double>(r.roundTrip.avgNs);
-                        double deviationPct = ((currentAvg - baselineAvg) / baselineAvg) * 100.0;
-                        if (deviationPct > static_cast<double>(_maxLatencyDeviationPct)) {
+                        double deviationMillipct = ((currentAvg - baselineAvg) / baselineAvg) * 100000.0;
+                        if (deviationMillipct > static_cast<double>(_maxLatencyDeviationPct)) {
                             r.passed = false;
                             char buf[256];
-                            snprintf(buf, sizeof(buf), "latency deviation %.1f%% exceeds %.1f%% threshold (baseline=%" PRIu64 " ns, current=%" PRIu64 " ns)",
-                                deviationPct, static_cast<double>(_maxLatencyDeviationPct),
+                            snprintf(buf, sizeof(buf), "latency deviation %.0f millipercent exceeds %u millipercent threshold (baseline=%" PRIu64 " ns, current=%" PRIu64 " ns)",
+                                deviationMillipct, _maxLatencyDeviationPct,
                                 baseline->second.roundTrip.avgNs, r.roundTrip.avgNs);
                             r.failureReason = string(buf);
                         }
