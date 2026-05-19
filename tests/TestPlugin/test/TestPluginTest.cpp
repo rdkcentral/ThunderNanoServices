@@ -134,12 +134,12 @@ namespace Tests {
     {
         string response;
         const uint32_t result = _runtime.Invoke("TestPlugin.nonexistent", "{}", response);
-        EXPECT_EQ(result, Core::ERROR_UNKNOWN_KEY);
+        EXPECT_EQ(result, Core::ERROR_UNKNOWN_METHOD);
     }
 
     TEST_F(TestPluginTest, JSONRPC_EchoViaLink)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
+        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         string response;
@@ -152,7 +152,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_GreetViaLink)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
+        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         string response;
@@ -293,7 +293,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_SubscribeReceivesEvent)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
+        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         std::mutex mtx;
@@ -327,7 +327,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_NoEventAfterUnsubscribe)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
+        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         std::mutex mtx;
