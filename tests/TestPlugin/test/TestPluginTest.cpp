@@ -301,7 +301,7 @@ namespace Tests {
         string receivedParams;
         bool eventFired = false;
 
-        uint32_t result = link->Subscribe("onGreeting", [&](const string& params) {
+        uint32_t result = link->Subscribe("onGreeting", [&](const string& /*designator*/, const string& /*index*/, const string& params) {
             std::lock_guard<std::mutex> lock(mtx);
             receivedParams = params;
             eventFired = true;
@@ -334,7 +334,7 @@ namespace Tests {
         std::condition_variable cv;
         bool eventFired = false;
 
-        uint32_t result = link->Subscribe("onGreeting", [&](const string& /* params */) {
+        uint32_t result = link->Subscribe("onGreeting", [&](const string& /*designator*/, const string& /*index*/, const string& /*params*/) {
             std::lock_guard<std::mutex> lock(mtx);
             eventFired = true;
             cv.notify_one();
