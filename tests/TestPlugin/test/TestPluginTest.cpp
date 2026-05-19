@@ -56,14 +56,14 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_QueryInterfaceSucceeds)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr) << "QueryInterface<ITestPlugin> must succeed";
         iface->Release();
     }
 
     TEST_F(TestPluginTest, COMRPC_EchoReturnsInput)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         string output;
@@ -76,7 +76,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_GreetReturnsMessage)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         string message;
@@ -89,7 +89,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_GreetDefaultsToWorld)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         string message;
@@ -102,7 +102,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_EchoEmptyString)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         string output;
@@ -139,7 +139,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_EchoViaLink)
     {
-        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
+        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         string response;
@@ -152,7 +152,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_GreetViaLink)
     {
-        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
+        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         string response;
@@ -214,7 +214,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_NotificationOnGreet)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         Core::SinkType<GreetingNotificationSink> sink;
@@ -239,7 +239,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_NoNotificationAfterUnregister)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         Core::SinkType<GreetingNotificationSink> sink;
@@ -268,7 +268,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, COMRPC_MultipleGreetsTriggerMultipleNotifications)
     {
-        auto* iface = _runtime.GetInterface<QualityAssurance::ITestPlugin>("TestPlugin");
+        auto* iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestPlugin>("TestPlugin");
         ASSERT_NE(iface, nullptr);
 
         Core::SinkType<GreetingNotificationSink> sink;
@@ -293,7 +293,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_SubscribeReceivesEvent)
     {
-        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
+        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         std::mutex mtx;
@@ -327,7 +327,7 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_NoEventAfterUnsubscribe)
     {
-        auto* link = _runtime.QueryInterfaceByCallsign("TestPlugin");
+        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
         ASSERT_NE(link, nullptr);
 
         std::mutex mtx;
