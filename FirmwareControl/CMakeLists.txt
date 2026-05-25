@@ -35,6 +35,7 @@ endif()
 
 find_package(MFRFWLibs REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -58,6 +59,7 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         MFRFWLibs::MFRFWLibs
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 

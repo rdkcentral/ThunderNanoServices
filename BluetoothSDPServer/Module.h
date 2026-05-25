@@ -25,6 +25,7 @@
 
 #include <bluetooth/audio/bluetooth_audio.h>
 #include <plugins/plugins.h>
+#include <common/common.h>
 
 #undef EXTERNAL
 #define EXTERNAL

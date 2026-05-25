@@ -22,7 +22,7 @@
 #include <CECMessage.h>
 
 #include <interfaces/IPower.h>
-#include <plugins/Types.h>
+#include <common/Types.h>
 
 namespace Thunder {
 namespace RPCLink {

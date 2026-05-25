@@ -49,6 +49,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 if(PLUGIN_WEBSERVER_SECURITYAGENT)
@@ -69,7 +70,8 @@ target_compile_options (${MODULE_NAME} PRIVATE -Wno-psabi)
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
-        ${NAMESPACE}Plugins::${NAMESPACE}Plugins)
+        ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common)
 
 if(PLUGIN_WEBSERVER_SECURITYAGENT)
     target_compile_definitions(${MODULE_NAME}

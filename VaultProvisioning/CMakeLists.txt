@@ -22,6 +22,7 @@ cmake_minimum_required(VERSION 3.15)
 find_package(Thunder)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Cryptography REQUIRED)
 
 project_version(1.0.0)
@@ -65,6 +66,7 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}Cryptography::${NAMESPACE}Cryptography
     )
 

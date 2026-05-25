@@ -34,6 +34,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}ProcessContainers REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
@@ -49,6 +50,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}ProcessContainers::${NAMESPACE}ProcessContainers
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 

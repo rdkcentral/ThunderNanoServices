@@ -37,6 +37,7 @@ endif()
 
 # This is a plugin so we need the Plugin configuration section.
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(CompileSettingsDebug  REQUIRED)
 
 add_library(${MODULE_NAME} SHARED
@@ -50,6 +51,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES
 target_link_libraries(${MODULE_NAME} 
     PRIVATE
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         CompileSettingsDebug::CompileSettingsDebug)
 
 # Library installation section

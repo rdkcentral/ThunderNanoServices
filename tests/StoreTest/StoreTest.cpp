@@ -23,7 +23,7 @@
 
 #include <core/core.h>
 #include <com/com.h>
-#include <plugins/Types.h>
+#include <common/Types.h>
 #include <interfaces/IDictionary.h>
 #include <interfaces/IStore.h>
 #include <iostream>

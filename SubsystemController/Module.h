@@ -24,6 +24,7 @@
 #endif
 
 #include <plugins/plugins.h>
+#include <common/common.h>
 #include <definitions/definitions.h>
 
 #undef EXTERNAL

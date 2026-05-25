@@ -36,6 +36,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(BCM_HOST QUIET)
@@ -52,6 +53,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         PNG::PNG)
 
 set_target_properties(${MODULE_NAME}

@@ -25,6 +25,7 @@
 #include <localtracer/localtracer.h>
 #include <messaging/messaging.h>
 #include <plugins/plugins.h>
+#include <common/common.h>
 
 #include <interfaces/IComposition.h>
 #include <interfaces/IGraphicsBuffer.h>

@@ -16,6 +16,7 @@
 # limitations under the License.
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -31,6 +32,7 @@ target_link_libraries(StoreTest
         PRIVATE
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
 	${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
         CompileSettingsDebug::CompileSettingsDebug
     )

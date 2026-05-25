@@ -35,6 +35,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(Cobalt REQUIRED)
@@ -71,6 +72,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         )
 
@@ -78,6 +80,7 @@ target_link_libraries(${PLUGIN_COBALT_IMPLEMENTATION}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${COBALT_LIBRARIES}
         )
 

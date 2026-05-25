@@ -21,6 +21,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Core CONFIG REQUIRED)
 find_package(${NAMESPACE}Messaging CONFIG REQUIRED)
 find_package(${NAMESPACE}LocalTracer CONFIG REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}CompositorBufferType CONFIG REQUIRED)
 
@@ -30,6 +31,7 @@ target_link_libraries(compositorserver
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}CompositorBufferType::${NAMESPACE}CompositorBufferType
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions

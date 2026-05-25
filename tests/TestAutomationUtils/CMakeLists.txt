@@ -33,6 +33,7 @@ set(PLUGIN_TESTAUTOMATIONUTILS_MODE "Local" CACHE STRING "Controls if the TestAu
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Tracing REQUIRED)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -50,6 +51,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE 
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
     PUBLIC
         ${EXTRA_LIBS}

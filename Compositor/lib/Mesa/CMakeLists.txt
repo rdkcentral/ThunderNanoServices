@@ -20,6 +20,7 @@ message(STATUS "Setting up ${PLATFORM_COMPOSITOR} for Mesa platfrom")
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(ClientGraphicsBufferType REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -45,6 +46,7 @@ target_link_libraries(${PLATFORM_COMPOSITOR}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
         ClientGraphicsBufferType::ClientGraphicsBufferType

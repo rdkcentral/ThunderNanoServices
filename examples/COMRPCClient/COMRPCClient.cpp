@@ -84,7 +84,7 @@
 #include <core/core.h>
 #include <com/com.h>
 #include <definitions/definitions.h>
-#include <plugins/Types.h>
+#include <common/Types.h>
 #include <interfaces/IDictionary.h>
 #include <iostream>
 

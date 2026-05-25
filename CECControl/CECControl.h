@@ -21,6 +21,7 @@
 #include "Module.h"
 
 #include <plugins/plugins.h>
+#include <common/common.h>
 
 namespace Thunder {
 namespace Plugin {

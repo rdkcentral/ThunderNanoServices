@@ -25,6 +25,7 @@
 
 #include <bluetooth/gatt/bluetooth_gatt.h>
 #include <plugins/plugins.h>
+#include <common/common.h>
 
 #undef EXTERNAL
 #define EXTERNAL

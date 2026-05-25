@@ -35,6 +35,7 @@ if(BUILD_REFERENCE)
 endif()
 
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
@@ -53,6 +54,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
     CompileSettingsDebug::CompileSettingsDebug
     ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
     ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     ${NAMESPACE}Messaging::${NAMESPACE}Messaging)
 

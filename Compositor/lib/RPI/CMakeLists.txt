@@ -21,6 +21,7 @@ message(STATUS "Setting up ${TARGET} for RPI platfrom")
 
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Common REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 
@@ -31,6 +32,7 @@ target_link_libraries(${TARGET}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+        ${NAMESPACE}Common::${NAMESPACE}Common
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 

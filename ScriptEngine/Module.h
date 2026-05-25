@@ -27,6 +27,7 @@
 #include <cryptalgo/cryptalgo.h>
 #include <websocket/websocket.h>
 #include <plugins/plugins.h>
+#include <common/common.h>
 
 #undef EXTERNAL
 #define EXTERNAL
