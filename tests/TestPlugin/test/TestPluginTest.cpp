@@ -139,28 +139,24 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_EchoViaLink)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
-        ASSERT_NE(link, nullptr);
+        auto link = _runtime.CreateJSONRPCLink("TestPlugin");
+        ASSERT_TRUE(link.IsValid());
 
         string response;
         const uint32_t result = link->Invoke("echo", R"({"input":"linked"})", response);
         EXPECT_EQ(result, Core::ERROR_NONE);
         EXPECT_NE(response.find("linked"), string::npos) << "response: " << response;
-
-        link->Release();
     }
 
     TEST_F(TestPluginTest, JSONRPC_GreetViaLink)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
-        ASSERT_NE(link, nullptr);
+        auto link = _runtime.CreateJSONRPCLink("TestPlugin");
+        ASSERT_TRUE(link.IsValid());
 
         string response;
         const uint32_t result = link->Invoke("greet", R"({"name":"Link"})", response);
         EXPECT_EQ(result, Core::ERROR_NONE);
         EXPECT_NE(response.find("Hello, Link!"), string::npos) << "response: " << response;
-
-        link->Release();
     }
 
     class GreetingNotificationSink : public QualityAssurance::ITestPlugin::INotification {
@@ -293,8 +289,8 @@ namespace Tests {
 
     TEST_F(TestPluginTest, JSONRPC_SubscribeReceivesEvent)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
-        ASSERT_NE(link, nullptr);
+        auto link = _runtime.CreateJSONRPCLink("TestPlugin");
+        ASSERT_TRUE(link.IsValid());
 
         std::mutex mtx;
         std::condition_variable cv;
@@ -322,13 +318,12 @@ namespace Tests {
         }
 
         link->Unsubscribe("onGreeting");
-        link->Release();
     }
 
     TEST_F(TestPluginTest, JSONRPC_NoEventAfterUnsubscribe)
     {
-        auto* link = _runtime.CreateJSONRPCLink("TestPlugin");
-        ASSERT_NE(link, nullptr);
+        auto link = _runtime.CreateJSONRPCLink("TestPlugin");
+        ASSERT_TRUE(link.IsValid());
 
         std::mutex mtx;
         std::condition_variable cv;
@@ -351,8 +346,6 @@ namespace Tests {
             const bool received = cv.wait_for(lock, std::chrono::milliseconds(200), [&] { return eventFired; });
             EXPECT_FALSE(received) << "JSON-RPC event received after Unsubscribe";
         }
-
-        link->Release();
     }
 
 } // namespace Tests
