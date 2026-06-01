@@ -26,7 +26,7 @@ add_executable(cec_accessor_test
 )
 
 set_target_properties(cec_accessor_test PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         ENABLE_EXPORTS FALSE)
 

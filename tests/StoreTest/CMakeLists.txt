@@ -23,7 +23,7 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_executable(StoreTest StoreTest.cpp)
 
 set_target_properties(StoreTest PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         )     
 

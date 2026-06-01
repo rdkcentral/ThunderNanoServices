@@ -51,6 +51,10 @@ add_library(${PLUGIN_YIN_DEFINITIONS} SHARED
     ${JSON_ENUM_SOURCES}
     Module.cpp)
 
+set_target_properties(${PLUGIN_YIN_DEFINITIONS} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_link_libraries(${PLUGIN_YIN_DEFINITIONS}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core

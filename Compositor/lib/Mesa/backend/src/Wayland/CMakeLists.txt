@@ -78,7 +78,7 @@ if (TARGET libdecor::libdecor)
 endif()
 
 set_target_properties(WaylandBackend PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         POSITION_INDEPENDENT_CODE ON
 )

@@ -39,6 +39,10 @@ add_library(${MODULE_NAME} SHARED
     GeneratorShowcase.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_include_directories(${MODULE_NAME} SYSTEM
     PRIVATE
         ".")

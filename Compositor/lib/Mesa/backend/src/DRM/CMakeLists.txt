@@ -46,7 +46,7 @@ target_link_libraries(CommonBackendDRM
 )
 
 set_target_properties(CommonBackendDRM PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         POSITION_INDEPENDENT_CODE ON
 )

@@ -60,6 +60,10 @@ add_library(${MODULE_NAME} SHARED
     WebPAImplementation.cpp
 )
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_compile_definitions(${MODULE_NAME} PRIVATE ${PLUGIN_DEFINITIONS})
 target_include_directories(${MODULE_NAME} PRIVATE ${PLUGIN_INCLUDE_DIRS})
 

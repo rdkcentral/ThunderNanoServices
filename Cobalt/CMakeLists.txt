@@ -54,6 +54,10 @@ add_library(${MODULE_NAME} SHARED
     CobaltJsonRpc.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 add_library(${PLUGIN_COBALT_IMPLEMENTATION} SHARED
     Module.cpp
     CobaltImplementation.cpp)

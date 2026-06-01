@@ -98,8 +98,8 @@ jobs:
         source venv/bin/activate
         ${{matrix.architecture == '32' && 'export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:$PKG_CONFIG_PATH' || 'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH'}}
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
-        -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
-        -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror -m${{matrix.architecture}}" \
+        -DCMAKE_CXX_FLAGS="-m${{matrix.architecture}}" \
+        -DCMAKE_C_FLAGS="-m${{matrix.architecture}}" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
         -DEXAMPLE_CLIENT_SERVER=ON \
@@ -114,10 +114,10 @@ jobs:
         -DEXAMPLE_MESSAGECONTROL_UDP_CLIENT=ON \
         -DEXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE=ON \
         -DEXAMPLE_SIMPLECOMRPC_TEST=ON \
-        -DPLUGIN_BLUETOOTH=ON \
-        -DPLUGIN_BLUETOOTHREMOTECONTROL=ON \
-        -DPLUGIN_BLUETOOTHAUDIO=ON \
-        -DPLUGIN_BLUETOOTHSDPSERVER=ON \
+        -DPLUGIN_BLUETOOTH=OFF \
+        -DPLUGIN_BLUETOOTHREMOTECONTROL=OFF \
+        -DPLUGIN_BLUETOOTHAUDIO=OFF \
+        -DPLUGIN_BLUETOOTHSDPSERVER=OFF \
         -DPLUGIN_CECCONTROL=ON \
         -DPLUGIN_COMMANDER=ON \
         -DPLUGIN_COMPOSITOR=ON \

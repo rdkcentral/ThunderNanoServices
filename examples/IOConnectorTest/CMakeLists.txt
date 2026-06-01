@@ -41,7 +41,7 @@ set(IOCONNECTOR_TEST_SOURCES
 add_executable(${MODULE_NAME} ${IOCONNECTOR_TEST_SOURCES})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         )     
 

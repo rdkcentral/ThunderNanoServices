@@ -66,6 +66,10 @@ add_library(${MODULE_NAME} SHARED
     DIALServerJsonRpc.cpp
     Module.cpp)
 
+set_target_properties(${MODULE_NAME} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 if(PLUGIN_DIALSERVER_ENABLE_YOUTUBE AND "${PLUGIN_DIALSERVER_YOUTUBE_MODE}" STREQUAL "active")
     target_sources(${MODULE_NAME}
         PRIVATE

@@ -28,6 +28,10 @@ add_library(${TARGET}
     DeviceInfo.cpp
 )
 
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_include_directories(${TARGET}
     PRIVATE
         ../

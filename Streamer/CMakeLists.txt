@@ -75,7 +75,7 @@ target_include_directories(${MODULE_NAME}
         ${CMAKE_CURRENT_LIST_DIR})
 
 set_target_properties(${MODULE_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES)
 
 # "whole-archive" to force linking of the static player libs

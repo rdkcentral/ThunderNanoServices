@@ -29,7 +29,7 @@ add_library(${LIB_NAME}
      PlayerImplementation.cpp)
 
 set_target_properties(${LIB_NAME} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES)
 
 if (PLUGIN_STREAMER_TS_SCANNING)

@@ -43,6 +43,10 @@ target_link_libraries(${TARGET}
         SysCfg::SysCfg
 )
 
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_compile_definitions(${TARGET} PRIVATE ${PLUGIN_DEFINITIONS})
 target_include_directories(${TARGET} PRIVATE ${PLUGIN_INCLUDE_DIRS})
 

@@ -42,6 +42,10 @@ add_library(${PLUGIN_YANG_MARSHALLING} SHARED
     ${PROXY_STUB_SOURCES}
     Module.cpp)
 
+set_target_properties(${PLUGIN_YANG_MARSHALLING} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
 target_link_libraries(${PLUGIN_YANG_MARSHALLING}
     PRIVATE
         ${NAMESPACE}Core::${NAMESPACE}Core

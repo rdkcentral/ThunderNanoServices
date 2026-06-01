@@ -196,7 +196,7 @@ namespace Plugin {
             
         if(!((path.size() >1) && (path.back() == Exchange::IDictionary::namespaceDelimiter))) {
 
-            std::list<Exchange::IDictionary::PathEntry> pathentries;
+            std::vector<Exchange::IDictionary::PathEntry> pathentries;
 
             if ((path.empty() == true) || ((path.size() == 1) && (path[0] == Exchange::IDictionary::namespaceDelimiter))) {
         
@@ -275,8 +275,8 @@ namespace Plugin {
         
             }
 
-            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator>;
-            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(pathentries);
+            using Implementation = RPC::IteratorType<Exchange::IDictionary::IPathIterator, std::vector<Exchange::IDictionary::PathEntry>>;
+            entries = Core::ServiceType<Implementation>::Create<Exchange::IDictionary::IPathIterator>(std::move(pathentries));
             
             result = Core::ERROR_NONE;
         

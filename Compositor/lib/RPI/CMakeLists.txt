@@ -35,7 +35,7 @@ target_link_libraries(${TARGET}
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions)
 
 set_target_properties(${TARGET} PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         FRAMEWORK FALSE)
 

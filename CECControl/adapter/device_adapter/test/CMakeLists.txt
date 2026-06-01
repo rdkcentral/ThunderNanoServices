@@ -13,7 +13,7 @@ PRIVATE
     ${CEC_INCLUDE_DIR})
 
 set_target_properties(cec_device_adapter_test PROPERTIES
-        CXX_STANDARD 11
+        CXX_STANDARD ${CXX_STD}
         CXX_STANDARD_REQUIRED YES
         ENABLE_EXPORTS FALSE)
 

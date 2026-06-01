@@ -25,7 +25,7 @@ add_executable(transformationtest main.cpp)
 add_subdirectory(ref_matrix)
 
 set_target_properties(transformationtest PROPERTIES
-    CXX_STANDARD 11
+    CXX_STANDARD ${CXX_STD}
     CXX_STANDARD_REQUIRED YES
 )
 

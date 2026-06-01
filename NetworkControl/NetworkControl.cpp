@@ -337,11 +337,13 @@ namespace Plugin
                 auto dns = request.Body<const Core::JSON::ArrayType<Core::JSON::String>>()->Elements();
 
                 if (dns.Count()) {
-                      std::list<string> elements;
+                    std::vector<string> elements;
+                    elements.reserve(dns.Count());
                     while (dns.Next() == true) {
                         elements.push_back(dns.Current());
                     }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(elements)};
+                    using DnsIterImpl = RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>, std::vector<string>>;
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* dnsList{Core::ServiceType<DnsIterImpl>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(std::move(elements))};
 
                     status = _networkControl->DNS(static_cast<Exchange::INetworkControl::IStringIterator* const&>(dnsList));
                     dnsList->Release();
@@ -361,11 +363,14 @@ namespace Plugin
                 auto network = request.Body<const Core::JSON::ArrayType<JsonData::NetworkControl::NetworkInfoInfo>>()->Elements();
 
                 if (network.Count()) {
-                    std::list<Exchange::INetworkControl::NetworkInfo> elements;
+                    std::vector<Exchange::INetworkControl::NetworkInfo> elements;
+                    elements.reserve(network.Count());
+
                     while (network.Next() == true) {
                         elements.push_back(network.Current());
                     }
-                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(elements)};
+                    using NetworkIterImpl = RPC::IteratorType<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>, std::vector<Exchange::INetworkControl::NetworkInfo>>;
+                    RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>* networkList{Core::ServiceType<NetworkIterImpl>::Create<RPC::IIteratorType<Exchange::INetworkControl::NetworkInfo, Exchange::ID_NETWORKCONTROL_NETWORK_INFO_ITERATOR>>(std::move(elements))};
 
                     status = _networkControl->Network(interface, static_cast<Exchange::INetworkControl::INetworkInfoIterator* const&>(networkList));
                     networkList->Release();

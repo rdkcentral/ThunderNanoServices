@@ -110,7 +110,9 @@ namespace Plugin {
                         sleep = paramscontainer.Sleep.Value();
                     }
 
-                    std::list<string> _elements;
+                    std::vector<string> _elements;
+                    _elements.reserve(updates);
+
                     for(uint32_t i = 0; i<updates; ++i) {
                         string s("UserScripts_Updated_");
                         s += std::to_string(i);
@@ -119,7 +121,8 @@ namespace Plugin {
                         }
                         _elements.push_back(s);
                     }
-                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::ServiceType<RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(_elements)};
+                    using ParamsIterImpl = RPC::IteratorType<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>, std::vector<string>>;
+                    RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>* _params{Core::ServiceType<ParamsIterImpl>::Create<RPC::IIteratorType<string, RPC::ID_STRINGITERATOR>>(std::move(_elements))};
                     if ((_params != nullptr)) {
                         _browserresources->UserScripts(_params);
                         _params->Release();
