@@ -287,10 +287,10 @@ namespace Plugin {
 
     void Benchmark::RegisterJsonRpcHandlers()
     {
-        PluginHost::JSONRPC::RegisterVersion(_T("JBenchmark"), 1, 0, 0);
+        PluginHost::JSONRPC::RegisterVersion(_T("JBenchmark"), 2, 0, 0);
 
-        // Method: 'trigger' — runs benchmarks via COM-RPC proxy
-        PluginHost::JSONRPC::Register<JsonData::Benchmark::TriggerParamsData, void>(_T("trigger"),
+        // Method: 'Trigger' — runs benchmarks via COM-RPC proxy
+        PluginHost::JSONRPC::Register<JsonData::Benchmark::TriggerParamsData, void>(_T("Trigger"),
             [this](const JsonData::Benchmark::TriggerParamsData& params) -> uint32_t {
                 if ((params.IsSet() == false) || (params.IsDataValid() == false)) {
                     return Core::ERROR_BAD_REQUEST;
@@ -315,8 +315,8 @@ namespace Plugin {
                 return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
             });
 
-        // Method: 'collectdata' — returns shell-side results
-        PluginHost::JSONRPC::Register<void, Core::JSON::ArrayType<JsonData::Benchmark::BenchmarkResultData>>(_T("collectdata"),
+        // Method: 'CollectData' — returns shell-side results
+        PluginHost::JSONRPC::Register<void, Core::JSON::ArrayType<JsonData::Benchmark::BenchmarkResultData>>(_T("CollectData"),
             [this](Core::JSON::ArrayType<JsonData::Benchmark::BenchmarkResultData>& report) -> uint32_t {
                 _adminLock.Lock();
                 report.Set(true);
@@ -327,31 +327,21 @@ namespace Plugin {
                 return Core::ERROR_NONE;
             });
 
-        // Method: 'setthreshold' — stores thresholds on the shell side
-        PluginHost::JSONRPC::Register<JsonData::Benchmark::SetThresholdParamsData, void>(_T("setthreshold"),
-            [this](const JsonData::Benchmark::SetThresholdParamsData& params) -> uint32_t {
-                if ((params.IsSet() == false) || (params.IsDataValid() == false)) {
-                    return Core::ERROR_BAD_REQUEST;
-                }
+        // Property: 'LatencyThreshold' — max allowed latency deviation in millipercent
+        PluginHost::JSONRPC::Property<Core::JSON::DecUInt32>(_T("LatencyThreshold"),
+            &Benchmark::GetLatencyThreshold, &Benchmark::SetLatencyThreshold, this);
 
-                _adminLock.Lock();
-                _maxLatencyDeviationPct = params.MaxLatencyDeviationPct;
-                _maxMemoryGrowthBytes = params.MaxMemoryGrowthBytes;
-                _baselines.clear();
-                _adminLock.Unlock();
-
-                TRACE(Trace::Information, (_T("Thresholds set: latency=%u millipercent, memory=%" PRIu64 " bytes"),
-                    static_cast<uint32_t>(params.MaxLatencyDeviationPct),
-                    static_cast<uint64_t>(params.MaxMemoryGrowthBytes)));
-                return Core::ERROR_NONE;
-            });
+        // Property: 'MemoryThreshold' — max allowed RSS growth in bytes
+        PluginHost::JSONRPC::Property<Core::JSON::DecUInt64>(_T("MemoryThreshold"),
+            &Benchmark::GetMemoryThreshold, &Benchmark::SetMemoryThreshold, this);
     }
 
     void Benchmark::UnregisterJsonRpcHandlers()
     {
-        PluginHost::JSONRPC::Unregister(_T("trigger"));
-        PluginHost::JSONRPC::Unregister(_T("collectdata"));
-        PluginHost::JSONRPC::Unregister(_T("setthreshold"));
+        PluginHost::JSONRPC::Unregister(_T("Trigger"));
+        PluginHost::JSONRPC::Unregister(_T("CollectData"));
+        PluginHost::JSONRPC::Unregister(_T("LatencyThreshold"));
+        PluginHost::JSONRPC::Unregister(_T("MemoryThreshold"));
     }
 
     void Benchmark::RunPayloadBenchmarks(uint32_t iterations)
@@ -415,6 +405,17 @@ namespace Plugin {
             _payloadProxy->SendReceiveSampleData(in, out);
         }));
 
+        addResult(MeasurePayloadMethod("SendUint32Array", iterations, [this]() {
+            const std::vector<uint32_t> data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            _payloadProxy->SendUint32Array(data);
+        }));
+
+        addResult(MeasurePayloadMethod("SendReceiveUint32Array", iterations, [this]() {
+            const std::vector<uint32_t> input = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            std::vector<uint32_t> output;
+            _payloadProxy->SendReceiveUint32Array(input, output);
+        }));
+
         addResult(MeasurePayloadMethod("Add", iterations, [this]() {
             uint32_t result = 0;
             _payloadProxy->Add(17, 25, result);
@@ -436,7 +437,9 @@ namespace Plugin {
             // Subsequent runs: compare against baseline
             for (auto& r : _results) {
                 r.passed = true;
-                r.failureReason = string();
+                r.failureReason.Clear();
+                bool latencyFailed = false;
+                bool memoryFailed = false;
 
                 auto baseline = _baselines.find(r.apiName);
                 if (baseline != _baselines.end()) {
@@ -446,28 +449,26 @@ namespace Plugin {
                         double currentAvg = static_cast<double>(r.roundTrip.avgNs);
                         double deviationMillipct = ((currentAvg - baselineAvg) / baselineAvg) * 100000.0;
                         if (deviationMillipct > static_cast<double>(_maxLatencyDeviationPct)) {
-                            r.passed = false;
-                            char buf[256];
-                            snprintf(buf, sizeof(buf), "latency deviation %.0f millipercent exceeds %u millipercent threshold (baseline=%" PRIu64 " ns, current=%" PRIu64 " ns)",
-                                deviationMillipct, _maxLatencyDeviationPct,
-                                baseline->second.roundTrip.avgNs, r.roundTrip.avgNs);
-                            r.failureReason = string(buf);
+                            latencyFailed = true;
                         }
                     }
                     // Memory check
                     if (_maxMemoryGrowthBytes > 0) {
                         int64_t growth = static_cast<int64_t>(r.memory.residentAfter) - static_cast<int64_t>(r.memory.residentBefore);
                         if (growth > 0 && static_cast<uint64_t>(growth) > _maxMemoryGrowthBytes) {
-                            r.passed = false;
-                            char buf[256];
-                            snprintf(buf, sizeof(buf), "memory growth %" PRId64 " bytes exceeds %" PRIu64 " byte threshold",
-                                growth, _maxMemoryGrowthBytes);
-                            string memMsg(buf);
-                            if (!r.failureReason.empty()) {
-                                r.failureReason += "; ";
-                            }
-                            r.failureReason += memMsg;
+                            memoryFailed = true;
                         }
+                    }
+
+                    if (latencyFailed && memoryFailed) {
+                        r.passed = false;
+                        r.failureReason = QualityAssurance::IBenchmark::LATENCY_AND_MEMORY_THRESHOLD_EXCEEDED;
+                    } else if (latencyFailed) {
+                        r.passed = false;
+                        r.failureReason = QualityAssurance::IBenchmark::LATENCY_THRESHOLD_EXCEEDED;
+                    } else if (memoryFailed) {
+                        r.passed = false;
+                        r.failureReason = QualityAssurance::IBenchmark::MEMORY_THRESHOLD_EXCEEDED;
                     }
                 }
             }
@@ -478,6 +479,42 @@ namespace Plugin {
             }
         }
         _adminLock.Unlock();
+    }
+
+    uint32_t Benchmark::GetLatencyThreshold(Core::JSON::DecUInt32& value) const
+    {
+        _adminLock.Lock();
+        value = _maxLatencyDeviationPct;
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t Benchmark::SetLatencyThreshold(const Core::JSON::DecUInt32& value)
+    {
+        _adminLock.Lock();
+        _maxLatencyDeviationPct = value;
+        _baselines.clear();
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Latency threshold set: %u millipercent"), static_cast<uint32_t>(value)));
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t Benchmark::GetMemoryThreshold(Core::JSON::DecUInt64& value) const
+    {
+        _adminLock.Lock();
+        value = _maxMemoryGrowthBytes;
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t Benchmark::SetMemoryThreshold(const Core::JSON::DecUInt64& value)
+    {
+        _adminLock.Lock();
+        _maxMemoryGrowthBytes = value;
+        _baselines.clear();
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Memory threshold set: %" PRIu64 " bytes"), static_cast<uint64_t>(value)));
+        return Core::ERROR_NONE;
     }
 
 }

@@ -129,6 +129,11 @@ namespace Plugin {
         void RunPayloadBenchmarks(uint32_t iterations);
         void ApplyThresholds();
 
+        uint32_t GetLatencyThreshold(Core::JSON::DecUInt32& value) const;
+        uint32_t SetLatencyThreshold(const Core::JSON::DecUInt32& value);
+        uint32_t GetMemoryThreshold(Core::JSON::DecUInt64& value) const;
+        uint32_t SetMemoryThreshold(const Core::JSON::DecUInt64& value);
+
     private:
         QualityAssurance::IBenchmark* _benchmark;
         uint32_t _connectionId;

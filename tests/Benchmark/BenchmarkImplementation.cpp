@@ -107,9 +107,27 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SetThreshold(const uint32_t /* maxLatencyDeviationPct */, const uint64_t /* maxMemoryGrowthBytes */) override
+        Core::hresult LatencyThreshold(const uint32_t /* maxLatencyDeviationPct */) override
         {
             // Thresholds are managed on the plugin shell side.
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult LatencyThreshold(uint32_t& maxLatencyDeviationPct) const override
+        {
+            maxLatencyDeviationPct = 0;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult MemoryThreshold(const uint64_t /* maxMemoryGrowthBytes */) override
+        {
+            // Thresholds are managed on the plugin shell side.
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult MemoryThreshold(uint64_t& maxMemoryGrowthBytes) const override
+        {
+            maxMemoryGrowthBytes = 0;
             return Core::ERROR_NONE;
         }
 
@@ -143,6 +161,11 @@ namespace Plugin {
         Core::hresult SendNoPayload() override { return Core::ERROR_NONE; }
 
         Core::hresult SendBuffer(const uint16_t /* bufferSize */, const uint8_t[] /* buffer */) override
+        {
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult SendUint32Array(const std::vector<uint32_t>& /* data */) override
         {
             return Core::ERROR_NONE;
         }
@@ -200,6 +223,12 @@ namespace Plugin {
             // Echo — buffer and size remain unchanged
             (void)bufferSize;
             (void)buffer;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult SendReceiveUint32Array(const std::vector<uint32_t>& input, std::vector<uint32_t>& output) const override
+        {
+            output = input;
             return Core::ERROR_NONE;
         }
 

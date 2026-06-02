@@ -35,6 +35,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Tracing REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
@@ -52,6 +53,7 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Tracing::${NAMESPACE}Tracing
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
     PUBLIC
         ${EXTRA_LIBS}
     )
