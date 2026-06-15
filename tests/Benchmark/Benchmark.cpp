@@ -20,6 +20,7 @@
 #include "Benchmark.h"
 #include <qa_interfaces/json/JBenchmark.h>
 
+#include <algorithm>
 #include <cinttypes>
 #include <cmath>
 #include <cstdio>
