@@ -1,0 +1,171 @@
+name: Linux build template
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+
+jobs:
+  ThunderNanoServices:
+
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release, MinSizeRel]
+        architecture: [32, 64]
+
+# --------- Packages & artifacts ---------
+    name: Build type - ${{matrix.build_type}}${{matrix.architecture == '32' && ' x86' || ''}}
+    steps:
+    - name: Prepare apt (add i386 if needed)
+      if: ${{ matrix.architecture == '32' }}
+      run: |
+        sudo dpkg --add-architecture i386
+
+    - name: Update apt indices (with retries)
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in {1..5}; do
+          if sudo apt-get update -o Acquire::Retries=5 -o Acquire::http::Timeout=30; then
+            break
+          fi
+          echo "apt-get update failed (attempt $attempt), retrying..."
+          sleep $((attempt*10))
+        done
+
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        export DEBIAN_FRONTEND=noninteractive
+        PKGS="python3-venv python3-pip build-essential cmake ninja-build libusb-1.0-0-dev"
+        if [ "${{ matrix.architecture }}" = "32" ]; then
+          PKGS="$PKGS zlib1g-dev:i386 libssl-dev:i386 libsbc-dev:i386 gcc-13-multilib g++-13-multilib"
+          PKGS="$PKGS libicu-dev:i386 libpng-dev:i386 libdrm-dev:i386 libgbm-dev:i386 libegl-dev:i386 libgles2-mesa-dev:i386"
+        else
+          PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev"
+          PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
+        fi
+        for attempt in {1..4}; do
+          if sudo apt-get install -y --no-install-recommends $PKGS; then
+            break
+          fi
+          echo "apt-get install failed (attempt $attempt), cleaning up & retrying..."
+          sudo apt-get clean
+          sleep $((attempt*15))
+        done
+
+    - name: Set up Python environment
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install jsonref
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: ThunderInterfaces-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
+        path: ${{matrix.build_type}}
+
+    - name: Unpack files
+      run: |
+        tar -xvzf ${{matrix.build_type}}/${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
+        rm ${{matrix.build_type}}/${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
+
+# ----- Regex & checkout -----
+    - name: Checkout ThunderNanoServices
+      uses: actions/checkout@v4
+      with:
+        path: ThunderNanoServices
+        repository: ${{github.repository_owner}}/ThunderNanoServices
+
+    - name: Regex ThunderNanoServices
+      if: contains(github.event.pull_request.body, '[Options:')
+      id: plugins
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[Options:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+# ----- Building & uploading -----
+    - name: Build ThunderNanoServices
+      run: |
+        source venv/bin/activate
+        ${{matrix.architecture == '32' && 'export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:$PKG_CONFIG_PATH' || 'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH'}}
+        cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
+        -DCMAKE_CXX_FLAGS="-m${{matrix.architecture}}" \
+        -DCMAKE_C_FLAGS="-m${{matrix.architecture}}" \
+        -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
+        -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
+        -DEXAMPLE_CLIENT_SERVER=ON \
+        -DEXAMPLE_COMRPCCLIENT=ON \
+        -DEXAMPLE_CUSTOMCODE_EXAMPLE=ON \
+        -DEXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE=ON \
+        -DEXAMPLE_DYNAMICLOADING=ON \
+        -DEXAMPLE_DYNAMICLOADING_YIN=ON \
+        -DEXAMPLE_DYNAMICLOADING_YANG=ON \
+        -DEXAMPLE_GENERATORSHOWCASE_EXAMPLE=ON \
+        -DEXAMPLE_IOCONNECTOR_TEST=ON \
+        -DEXAMPLE_MESSAGECONTROL_UDP_CLIENT=ON \
+        -DEXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE=ON \
+        -DEXAMPLE_SIMPLECOMRPC_TEST=ON \
+        -DPLUGIN_BLUETOOTH=OFF \
+        -DPLUGIN_BLUETOOTHREMOTECONTROL=OFF \
+        -DPLUGIN_BLUETOOTHAUDIO=OFF \
+        -DPLUGIN_BLUETOOTHSDPSERVER=OFF \
+        -DPLUGIN_CECCONTROL=ON \
+        -DPLUGIN_COMMANDER=ON \
+        -DPLUGIN_COMPOSITOR=ON \
+        -DPLUGIN_COMPOSITOR_IMPLEMENTATION=RPI \
+        -DPLUGIN_CONFIGUPDATEEXAMPLE=ON \
+        -DPLUGIN_DHCPSERVER=ON \
+        -DPLUGIN_DIALSERVER=ON \
+        -DPLUGIN_DICTIONARY=ON \
+        -DPLUGIN_FILETRANSFER=ON \
+        -DPLUGIN_INPUTSWITCH=ON \
+        -DPLUGIN_IOCONNECTOR=ON \
+        -DPLUGIN_JSONRPC=ON \
+        -DPLUGIN_JSONRPCMUXER=ON \
+        -DPLUGIN_LANGUAGEADMINISTRATOR=ON \
+        -DPLUGIN_NETWORKCONTROL=ON \
+        -DPLUGIN_OUTOFPROCESS=ON \
+        -DPLUGIN_PERFORMANCEMONITOR=ON \
+        -DPLUGIN_PLUGININITIALIZERSERVICE=ON \
+        -DPLUGIN_POWER=ON \
+        -DPLUGIN_PROCESSCONTAINERS=ON \
+        -DPLUGIN_PROCESSMONITOR=ON \
+        -DPLUGIN_REMOTECONTROL=ON \
+        -DPLUGIN_RESOURCEMONITOR=ON \
+        -DPLUGIN_SNAPSHOT=ON \
+        -DPLUGIN_STATECONTROLLER=ON \
+        -DPLUGIN_SUBSYSTEMCONTROLLER=ON \
+        -DPLUGIN_SWITCHBOARD=ON \
+        -DPLUGIN_SYSTEMCOMMANDS=ON \
+        -DPLUGIN_TESTCONTROLLER=ON \
+        -DPLUGIN_TESTPRIORITYQUEUE=ON \
+        -DPLUGIN_TESTTEXTOPTIONS=ON \
+        -DPLUGIN_TESTUTILITY=ON \
+        -DPLUGIN_TIMESYNC=ON \
+        -DPLUGIN_WEBPROXY=ON \
+        -DPLUGIN_WEBSERVER=ON \
+        -DPLUGIN_WEBSHELL=ON \
+        -DPLUGIN_WIFICONTROL=ON \
+        -DPLUGIN_VOLUMECONTROL=ON \
+        -DSTORE_TEST=ON \
+        -DTEST_AUTOMATION_TOOLS=ON \
+        ${{steps.plugins.outputs.first_match}}
+        cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
+
+    - name: Tar files
+      run: tar -czvf ${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz ${{matrix.build_type}}
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ThunderNanoServices-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
+        path: ${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
