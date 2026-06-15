@@ -441,12 +441,15 @@ namespace Plugin {
             // First run with thresholds: store as baseline
             for (auto& r : _results) {
                 _baselines[r.apiName] = r;
-                r.passed = true;
+                // Preserve passed=false from COM-RPC call failures
             }
         } else if (hasThresholds) {
             // Subsequent runs: compare against baseline
             for (auto& r : _results) {
-                r.passed = true;
+                if (r.passed == false) {
+                    // COM-RPC call failed during measurement; don't override
+                    continue;
+                }
                 r.failureReason.Clear();
                 bool latencyFailed = false;
                 bool memoryFailed = false;
@@ -483,9 +486,11 @@ namespace Plugin {
                 }
             }
         } else {
-            // No thresholds: everything passes
+            // No thresholds: mark as passed only if COM-RPC calls succeeded
             for (auto& r : _results) {
-                r.passed = true;
+                if (r.passed != false) {
+                    r.passed = true;
+                }
             }
         }
         _adminLock.Unlock();
