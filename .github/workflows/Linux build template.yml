@@ -102,7 +102,6 @@ jobs:
         -DCMAKE_C_FLAGS="-m${{matrix.architecture}}" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
-        -DEXAMPLE_CLIENT_SERVER=ON \
         -DEXAMPLE_COMRPCCLIENT=ON \
         -DEXAMPLE_CUSTOMCODE_EXAMPLE=ON \
         -DEXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE=ON \
