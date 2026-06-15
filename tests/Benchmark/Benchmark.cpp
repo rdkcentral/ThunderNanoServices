@@ -136,40 +136,48 @@ namespace Plugin {
 
         template<typename CALLABLE>
         QualityAssurance::IBenchmark::BenchmarkResult MeasurePayloadMethod(
-            const string& apiName, uint32_t iterations, CALLABLE&& fn)
+            const string& apiName, uint32_t iterations, Exchange::IMemory* memory, CALLABLE&& fn)
         {
-            Core::ProcessInfo processInfo(Core::ProcessInfo().Id());
+            ASSERT(memory != nullptr);
 
-            uint64_t residentBefore = processInfo.Resident();
-            uint64_t allocatedBefore = processInfo.Allocated();
+            uint64_t residentBefore = memory->Resident();
+            uint64_t allocatedBefore = memory->Allocated();
 
             LatencyAccumulator acc;
+            uint32_t completedIterations = 0;
 
             // Single pass: time each call individually, derive avg from the sum
             Core::StopWatch batchTimer;
             for (uint32_t i = 0; i < iterations; i++) {
                 Core::StopWatch timer;
-                fn();
+                uint32_t hr = fn();
                 uint64_t elapsedUs = timer.Elapsed();
+                if (hr != Core::ERROR_NONE) {
+                    SYSLOG(Logging::Error, (_T("COM-RPC call '%s' failed on iteration %u with error 0x%08X"),
+                        apiName.c_str(), i, hr));
+                    break;
+                }
                 acc.Record(elapsedUs);
+                completedIterations++;
             }
             uint64_t totalBatchUs = batchTimer.Elapsed();
 
-            uint64_t residentAfter = processInfo.Resident();
-            uint64_t allocatedAfter = processInfo.Allocated();
+            uint64_t residentAfter = memory->Resident();
+            uint64_t allocatedAfter = memory->Allocated();
 
             QualityAssurance::IBenchmark::BenchmarkResult result{};
             result.apiName = apiName;
-            result.iterations = iterations;
+            result.iterations = completedIterations;
             result.roundTrip = acc.Stats();
             // Override avgNs with batch-derived value for better precision
-            if (iterations > 0) {
-                result.roundTrip.avgNs = (totalBatchUs * 1000) / iterations;
+            if (completedIterations > 0) {
+                result.roundTrip.avgNs = (totalBatchUs * 1000) / completedIterations;
             }
             result.memory.residentBefore = residentBefore;
             result.memory.residentAfter = residentAfter;
             result.memory.allocatedBefore = allocatedBefore;
             result.memory.allocatedAfter = allocatedAfter;
+            result.passed = (completedIterations == iterations);
 
             return result;
         }
@@ -354,71 +362,72 @@ namespace Plugin {
             _adminLock.Unlock();
         };
 
-        addResult(MeasurePayloadMethod("SendUint32", iterations, [this]() {
-            _payloadProxy->SendUint32(42);
+        addResult(MeasurePayloadMethod("SendUint32", iterations, _memory, [this]() -> uint32_t {
+            return _payloadProxy->SendUint32(42);
         }));
 
-        addResult(MeasurePayloadMethod("SendUint64", iterations, [this]() {
-            _payloadProxy->SendUint64(UINT64_C(123456789));
+        addResult(MeasurePayloadMethod("SendUint64", iterations, _memory, [this]() -> uint32_t {
+            return _payloadProxy->SendUint64(UINT64_C(123456789));
         }));
 
-        addResult(MeasurePayloadMethod("GetPayloadTypes", iterations, [this]() {
+        addResult(MeasurePayloadMethod("GetPayloadTypes", iterations, _memory, [this]() -> uint32_t {
             QualityAssurance::IBenchmarkPayload::IPayloadTypeIterator* iter = nullptr;
-            _payloadProxy->GetPayloadTypes(iter);
+            uint32_t hr = _payloadProxy->GetPayloadTypes(iter);
             if (iter != nullptr) {
                 iter->Release();
             }
+            return hr;
         }));
 
-        addResult(MeasurePayloadMethod("SendString", iterations, [this]() {
-            _payloadProxy->SendString(_T("benchmark_payload_string"));
+        addResult(MeasurePayloadMethod("SendString", iterations, _memory, [this]() -> uint32_t {
+            return _payloadProxy->SendString(_T("benchmark_payload_string"));
         }));
 
-        addResult(MeasurePayloadMethod("SendSampleData", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendSampleData", iterations, _memory, [this]() -> uint32_t {
             QualityAssurance::IBenchmarkPayload::SampleData data;
             data.id = 1;
             data.value = 100;
             data.name = _T("sample");
-            _payloadProxy->SendSampleData(data);
+            return _payloadProxy->SendSampleData(data);
         }));
 
-        addResult(MeasurePayloadMethod("SendNoPayload", iterations, [this]() {
-            _payloadProxy->SendNoPayload();
+        addResult(MeasurePayloadMethod("SendNoPayload", iterations, _memory, [this]() -> uint32_t {
+            return _payloadProxy->SendNoPayload();
         }));
 
-        addResult(MeasurePayloadMethod("SendReceiveUint32", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendReceiveUint32", iterations, _memory, [this]() -> uint32_t {
             uint32_t out = 0;
-            _payloadProxy->SendReceiveUint32(42, out);
+            return _payloadProxy->SendReceiveUint32(42, out);
         }));
 
-        addResult(MeasurePayloadMethod("SendReceiveString", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendReceiveString", iterations, _memory, [this]() -> uint32_t {
             string out;
-            _payloadProxy->SendReceiveString(_T("benchmark_roundtrip"), out);
+            return _payloadProxy->SendReceiveString(_T("benchmark_roundtrip"), out);
         }));
 
-        addResult(MeasurePayloadMethod("SendReceiveSampleData", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendReceiveSampleData", iterations, _memory, [this]() -> uint32_t {
             QualityAssurance::IBenchmarkPayload::SampleData in;
             in.id = 1;
             in.value = 200;
             in.name = _T("roundtrip");
             QualityAssurance::IBenchmarkPayload::SampleData out;
-            _payloadProxy->SendReceiveSampleData(in, out);
+            return _payloadProxy->SendReceiveSampleData(in, out);
         }));
 
-        addResult(MeasurePayloadMethod("SendUint32Array", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendUint32Array", iterations, _memory, [this]() -> uint32_t {
             const std::vector<uint32_t> data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-            _payloadProxy->SendUint32Array(data);
+            return _payloadProxy->SendUint32Array(data);
         }));
 
-        addResult(MeasurePayloadMethod("SendReceiveUint32Array", iterations, [this]() {
+        addResult(MeasurePayloadMethod("SendReceiveUint32Array", iterations, _memory, [this]() -> uint32_t {
             const std::vector<uint32_t> input = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
             std::vector<uint32_t> output;
-            _payloadProxy->SendReceiveUint32Array(input, output);
+            return _payloadProxy->SendReceiveUint32Array(input, output);
         }));
 
-        addResult(MeasurePayloadMethod("Add", iterations, [this]() {
+        addResult(MeasurePayloadMethod("Add", iterations, _memory, [this]() -> uint32_t {
             uint32_t result = 0;
-            _payloadProxy->Add(17, 25, result);
+            return _payloadProxy->Add(17, 25, result);
         }));
     }
 
