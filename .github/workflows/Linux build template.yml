@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      thundernanoservices_ref:
+        description: 'ThunderNanoServices ref to checkout (branch, tag, or SHA). Defaults to R4_4.'
+        type: string
+        default: 'R4_4'
 
 jobs:
   ThunderNanoServices:
@@ -82,6 +87,7 @@ jobs:
       with:
         path: ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
+        ref: ${{ inputs.thundernanoservices_ref }}
 
     - name: Regex ThunderNanoServices
       if: contains(github.event.pull_request.body, '[Options:')
