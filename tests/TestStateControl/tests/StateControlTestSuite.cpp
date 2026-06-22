@@ -658,6 +658,54 @@ protected:
 
 ThunderTestRuntime StateControlFrameworkFixture::_runtime;
 
+// ==========================================================================
+// Framework auto-resume fixture
+//
+// Isolated ThunderTestRuntime so FrameworkAutoResumesPluginWhenResumedIsTrue
+// sees a pristine post-activation state regardless of test shuffle order.
+// ==========================================================================
+
+class StateControlFrameworkAutoResumeFixture : public ::testing::Test {
+protected:
+    static ThunderTestRuntime _runtime;
+    PluginHost::IStateControl* _stateControl{ nullptr };
+
+    static void SetUpTestSuite()
+    {
+        ThunderTestRuntime::PluginConfig cfg;
+        cfg.Callsign  = "TestStateControl";
+        cfg.ClassName = "TestStateControl";
+        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Resumed   = true;
+
+        const uint32_t result = _runtime.Initialize({ cfg });
+        ASSERT_EQ(result, Core::ERROR_NONE)
+            << "ThunderTestRuntime (AutoResume fixture) failed to initialise";
+    }
+
+    static void TearDownTestSuite()
+    {
+        _runtime.Deinitialize();
+    }
+
+    void SetUp() override
+    {
+        _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
+            "TestStateControl");
+        ASSERT_NE(_stateControl, nullptr);
+    }
+
+    void TearDown() override
+    {
+        if (_stateControl != nullptr) {
+            _stateControl->Release();
+            _stateControl = nullptr;
+        }
+    }
+};
+
+ThunderTestRuntime StateControlFrameworkAutoResumeFixture::_runtime;
+
 // --------------------------------------------------------------------------
 // a) Framework auto-resumes the plugin when Resumed=true in config.
 //
@@ -668,7 +716,7 @@ ThunderTestRuntime StateControlFrameworkFixture::_runtime;
 //   3. Call IStateControl::Configure(shell).
 //   4. Call IStateControl::Request(RESUME) because Resumed==true.
 // --------------------------------------------------------------------------
-TEST_F(StateControlFrameworkFixture, FrameworkAutoResumesPluginWhenResumedIsTrue)
+TEST_F(StateControlFrameworkAutoResumeFixture, FrameworkAutoResumesPluginWhenResumedIsTrue)
 {
     // The RESUME is dispatched asynchronously by the worker pool inside the
     // plugin.  Poll until the state arrives or timeout.
@@ -695,9 +743,13 @@ TEST_F(StateControlFrameworkFixture, ShellResumedReflectsConfigValue)
 // --------------------------------------------------------------------------
 TEST_F(StateControlFrameworkFixture, ManualSuspendWorksAfterFrameworkResume)
 {
-    // Wait for the framework RESUME first.
-    ASSERT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::RESUMED))
-        << "Prerequisite: plugin must be RESUMED before this test";
+    // Drive to RESUMED regardless of shuffle order — another test may have
+    // suspended the plugin before this one runs.
+    if (_stateControl->State() != PluginHost::IStateControl::RESUMED) {
+        ASSERT_EQ(_stateControl->Request(PluginHost::IStateControl::RESUME), Core::ERROR_NONE);
+        ASSERT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::RESUMED))
+            << "Prerequisite: plugin must be RESUMED before testing manual SUSPEND";
+    }
 
     EXPECT_EQ(_stateControl->Request(PluginHost::IStateControl::SUSPEND), Core::ERROR_NONE);
     EXPECT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::SUSPENDED))

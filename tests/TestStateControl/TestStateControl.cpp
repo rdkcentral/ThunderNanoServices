@@ -44,7 +44,7 @@ namespace Plugin {
         return {};
     }
 
-    void TestStateControl::Deinitialize(PluginHost::IShell* service)
+    void TestStateControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
 

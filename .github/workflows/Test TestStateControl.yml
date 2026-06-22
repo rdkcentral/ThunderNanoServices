@@ -1,0 +1,139 @@
+name: Test TestStateControl
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+    paths:
+      - 'tests/TestStateControl/**'
+  pull_request:
+    branches: ["master"]
+    paths:
+      - 'tests/TestStateControl/**'
+
+jobs:
+  TestStateControl:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release, MinSizeRel]
+
+    name: TestStateControl - ${{matrix.build_type}}
+
+    steps:
+# ----- Packages -----
+    - name: Install system dependencies
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 10
+        command: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-venv python3-pip build-essential cmake ninja-build \
+            libusb-1.0-0-dev zlib1g-dev libssl-dev libgtest-dev
+
+    - name: Set up Python environment
+      run: |
+        python3 -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install jsonref
+
+# ----- Checkout -----
+    - name: Checkout ThunderTools
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=ThunderTools:') }}
+      uses: actions/checkout@v4
+      with:
+        path: ThunderTools
+        repository: rdkcentral/ThunderTools
+
+    - name: Regex ThunderTools
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      id: tools
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=ThunderTools:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout ThunderTools - ${{steps.tools.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=ThunderTools:')
+      uses: actions/checkout@v4
+      with:
+        path: ThunderTools
+        repository: rdkcentral/ThunderTools
+        ref: ${{steps.tools.outputs.first_match}}
+
+    - name: Checkout Thunder
+      if: ${{ !contains(github.event.pull_request.body, '[DependsOn=Thunder:') }}
+      uses: actions/checkout@v4
+      with:
+        path: Thunder
+        repository: rdkcentral/Thunder
+
+    - name: Regex Thunder
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      id: thunder
+      uses: AsasInnab/regex-action@v1
+      with:
+        regex_pattern: '(?<=\[DependsOn=Thunder:).*(?=\])'
+        regex_flags: 'gim'
+        search_string: ${{github.event.pull_request.body}}
+
+    - name: Checkout Thunder - ${{steps.thunder.outputs.first_match}}
+      if: contains(github.event.pull_request.body, '[DependsOn=Thunder:')
+      uses: actions/checkout@v4
+      with:
+        path: Thunder
+        repository: rdkcentral/Thunder
+        ref: ${{steps.thunder.outputs.first_match}}
+
+    - name: Checkout ThunderNanoServices
+      uses: actions/checkout@v4
+      with:
+        path: ThunderNanoServices
+
+# ----- Build -----
+    - name: Build ThunderTools
+      run: |
+        source venv/bin/activate
+        cmake -G Ninja -S ThunderTools -B build/ThunderTools \
+          -DCMAKE_INSTALL_PREFIX="${PWD}/install/usr"
+        cmake --build build/ThunderTools --target install
+
+    - name: Build Thunder
+      run: |
+        source venv/bin/activate
+        cmake -G Ninja -S Thunder -B build/Thunder \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+          -DCMAKE_INSTALL_PREFIX="${PWD}/install/usr" \
+          -DCMAKE_MODULE_PATH="${PWD}/install/usr/include/Thunder/Modules" \
+          -DBINDING="127.0.0.1" \
+          -DPORT=0 \
+          -DENABLE_TEST_RUNTIME=ON
+        cmake --build build/Thunder --target install
+
+    - name: Build TestStateControl plugin and test suite
+      run: |
+        source venv/bin/activate
+        cmake -G Ninja -S ThunderNanoServices/tests -B build/ThunderNanoServicesTests \
+          -DCMAKE_BUILD_TYPE=${{matrix.build_type}} \
+          -DCMAKE_INSTALL_PREFIX="${PWD}/install/usr" \
+          -DCMAKE_MODULE_PATH="${PWD}/install/usr/include/Thunder/Modules" \
+          -DCMAKE_PREFIX_PATH="${PWD}/install/usr" \
+          -DPLUGIN_TESTSTATECONTROL=ON \
+          -DTESTSTATECONTROL_TESTS=ON
+        cmake --build build/ThunderNanoServicesTests --target install
+
+# ----- Run -----
+    - name: Run TestStateControl tests
+      run: |
+        LD_LIBRARY_PATH=${PWD}/install/usr/lib:${PWD}/install/usr/lib/thunder/plugins:${PWD}/install/usr/lib/thunder/proxystubs \
+          build/ThunderNanoServicesTests/TestStateControl/tests/thunder_statecontrol_tests \
+          --gtest_color=yes \
+          --gtest_shuffle
