@@ -46,7 +46,7 @@ jobs:
           PKGS="$PKGS zlib1g-dev:i386 libssl-dev:i386 libsbc-dev:i386 gcc-13-multilib g++-13-multilib"
           PKGS="$PKGS libicu-dev:i386 libpng-dev:i386 libdrm-dev:i386 libgbm-dev:i386 libegl-dev:i386 libgles2-mesa-dev:i386"
         else
-          PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev"
+          PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev libgtest-dev"
           PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
         fi
         for attempt in {1..4}; do
@@ -158,6 +158,7 @@ jobs:
         -DPLUGIN_VOLUMECONTROL=ON \
         -DSTORE_TEST=ON \
         -DTEST_AUTOMATION_TOOLS=ON \
+        -DPLUGIN_TESTSTATECONTROL=ON \
         ${{steps.plugins.outputs.first_match}}
         cmake --build ${{matrix.build_type}}/build/ThunderNanoServices --target install
 
