@@ -47,6 +47,9 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${NAMESPACE}_Runtime)
 
+set(PLUGIN_TESTSTATECONTROL_STARTMODE "Activated" CACHE STRING "Startup mode of the TestStateControl plugin")
+set(PLUGIN_TESTSTATECONTROL_RESUMED false CACHE BOOL "Start TestStateControl in resumed state")
+
 write_config()
 
 # ---------------------------------------------------------------------------

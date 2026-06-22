@@ -65,9 +65,11 @@ namespace Tests {
  * Concrete IStateControl::INotification that records every StateChange()
  * call and provides a condition-variable based WaitForState() helper.
  *
- * Lifetime: stack-allocated instances own their own reference count.
- * Pass a raw pointer to Register(); the plugin AddRef()s it internally.
- * After Unregister(), call Release() to hand back your initial reference.
+ * Lifetime: wrap in Core::SinkType<StateObserver> (stack-allocated).
+ * Core::SinkType provides the ref-counting; this class must NOT implement
+ * AddRef()/Release(). Pass &sink to Register(); the plugin AddRef()s it.
+ * Unregister() calls Release() on the observer, balancing that AddRef().
+ * No extra Release() is needed after Unregister().
  */
 class StateObserver : public PluginHost::IStateControl::INotification {
 public:
@@ -193,7 +195,6 @@ protected:
         // Library name as installed by the TestStateControl CMake target:
         // libThunderTestStateControl.so
         cfg.Locator   = "libThunderTestStateControl.so";
-        // Do NOT set Resumed = true: we want to observe UNINITIALIZED first.
         cfg.Resumed   = false;
 
         const uint32_t result = _runtime.Initialize({ cfg });
@@ -256,20 +257,62 @@ protected:
 ThunderTestRuntime StateControlTestSuite::_runtime;
 
 // ==========================================================================
-// 1. Interface availability
-//    (These tests do not issue any Request() so they leave state untouched.)
+// 0. Initial state
+//
+// Uses a dedicated fixture with its own ThunderTestRuntime so the test is
+// order-independent and safe when GTest shuffles test execution.
 // ==========================================================================
 
-/**
- * MUST be the first test in the suite so that UNINITIALIZED is still the
- * current state.  All tests after this one use EnsureResumed /
- * EnsureSuspended to reach a known state independently of ordering.
- */
-TEST_F(StateControlTestSuite, InitialStateIsUninitialized)
+class StateControlInitialStateFixture : public ::testing::Test {
+protected:
+    static ThunderTestRuntime _runtime;
+    PluginHost::IStateControl* _stateControl{ nullptr };
+
+    static void SetUpTestSuite()
+    {
+        ThunderTestRuntime::PluginConfig cfg;
+        cfg.Callsign  = "TestStateControl";
+        cfg.ClassName = "TestStateControl";
+        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Resumed   = false;
+
+        const uint32_t result = _runtime.Initialize({ cfg });
+        ASSERT_EQ(result, Core::ERROR_NONE)
+            << "ThunderTestRuntime (InitialState fixture) failed to initialise";
+    }
+
+    static void TearDownTestSuite()
+    {
+        _runtime.Deinitialize();
+    }
+
+    void SetUp() override
+    {
+        _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
+            "TestStateControl");
+        ASSERT_NE(_stateControl, nullptr);
+    }
+
+    void TearDown() override
+    {
+        if (_stateControl != nullptr) {
+            _stateControl->Release();
+            _stateControl = nullptr;
+        }
+    }
+};
+
+ThunderTestRuntime StateControlInitialStateFixture::_runtime;
+
+TEST_F(StateControlInitialStateFixture, InitialStateIsUninitialized)
 {
     EXPECT_EQ(_stateControl->State(), PluginHost::IStateControl::UNINITIALIZED)
         << "Plugin must start in UNINITIALIZED state when Resumed=false";
 }
+
+// ==========================================================================
+// 1. Interface availability
+// ==========================================================================
 
 TEST_F(StateControlTestSuite, QueryInterfaceByCallsignReturnsNonNull)
 {

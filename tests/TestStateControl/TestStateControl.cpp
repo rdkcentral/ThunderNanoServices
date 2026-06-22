@@ -41,7 +41,6 @@ namespace Plugin {
         ASSERT(_service == nullptr);
         _service = service;
         _service->AddRef();
-        Configure(service);
         return {};
     }
 
@@ -55,7 +54,9 @@ namespace Plugin {
         _state = PluginHost::IStateControl::EXITED;
         for (auto& observer : _observers) {
             observer->StateChange(PluginHost::IStateControl::EXITED);
+            observer->Release();
         }
+        _observers.clear();
         _adminLock.Unlock();
 
         _service->Release();

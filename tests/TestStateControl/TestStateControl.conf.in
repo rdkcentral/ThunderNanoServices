@@ -1,2 +1,2 @@
-startmode = "Activated"
-resumed = "true"
+startmode = @PLUGIN_TESTSTATECONTROL_STARTMODE@
+resumed = @PLUGIN_TESTSTATECONTROL_RESUMED@
