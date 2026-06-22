@@ -27,27 +27,53 @@ namespace {
 
 class VolumeControlPlatformStub : public VolumeControlPlatform {
 public:
-  ~VolumeControlPlatformStub() override = default;
+    VolumeControlPlatformStub(VolumeChangedCallback&& volumeChanged, MutedChangedCallback&& mutedChanged)
+        : _volumeChanged(std::move(volumeChanged))
+        , _mutedChanged(std::move(mutedChanged))
+        , _muted(false)
+        , _volume(0)
+    {
+    }
 
-  uint32_t Muted(bool) override
-  {
-      return Core::ERROR_NONE;
-  }
+    ~VolumeControlPlatformStub() override = default;
 
-  bool Muted() const override
-  {
-      return false;
-  }
+    uint32_t Muted(bool muted) override
+    {
+        _muted = muted;
 
-  uint32_t Volume(uint8_t) override
-  {
-      return Core::ERROR_NONE;
-  }
+        if (_mutedChanged) {
+            _mutedChanged();
+        }
 
-  uint8_t Volume() const override
-  {
-      return 0;
-  }
+        return (Core::ERROR_NONE);
+    }
+
+    bool Muted() const override
+    {
+        return (_muted);
+    }
+
+    uint32_t Volume(uint8_t volume) override
+    {
+        _volume = volume;
+
+        if (_volumeChanged) {
+            _volumeChanged();
+        }
+
+        return (Core::ERROR_NONE);
+    }
+
+    uint8_t Volume() const override
+    {
+        return (_volume);
+    }
+
+private:
+    VolumeChangedCallback _volumeChanged;
+    MutedChangedCallback _mutedChanged;
+    bool _muted;
+    uint8_t _volume;
 
 };
 
@@ -55,10 +81,10 @@ public:
 
 // static
 std::unique_ptr<VolumeControlPlatform> VolumeControlPlatform::Create(
-    VolumeControlPlatform::VolumeChangedCallback&&,
-    VolumeControlPlatform::MutedChangedCallback&&)
+    VolumeControlPlatform::VolumeChangedCallback&& volumeChanged,
+    VolumeControlPlatform::MutedChangedCallback&& mutedChanged)
 {
-    return std::unique_ptr<VolumeControlPlatform>{new VolumeControlPlatformStub};
+    return (std::unique_ptr<VolumeControlPlatform>{new VolumeControlPlatformStub(std::move(volumeChanged), std::move(mutedChanged))});
 }
 
 }  // namespace Plugin
