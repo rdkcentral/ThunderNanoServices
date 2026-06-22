@@ -17,6 +17,8 @@
  * limitations under the License.
  */
  
+#include <atomic>
+
 #include "../Module.h"
 #include "../VolumeControlPlatform.h"
 
@@ -39,7 +41,7 @@ public:
 
     uint32_t Muted(bool muted) override
     {
-        _muted = muted;
+        _muted.store(muted);
 
         if (_mutedChanged) {
             _mutedChanged();
@@ -50,12 +52,12 @@ public:
 
     bool Muted() const override
     {
-        return (_muted);
+        return (_muted.load());
     }
 
     uint32_t Volume(uint8_t volume) override
     {
-        _volume = volume;
+        _volume.store(volume);
 
         if (_volumeChanged) {
             _volumeChanged();
@@ -66,14 +68,14 @@ public:
 
     uint8_t Volume() const override
     {
-        return (_volume);
+        return (_volume.load());
     }
 
 private:
     VolumeChangedCallback _volumeChanged;
     MutedChangedCallback _mutedChanged;
-    bool _muted;
-    uint8_t _volume;
+    std::atomic<bool> _muted;
+    std::atomic<uint8_t> _volume;
 
 };
 
