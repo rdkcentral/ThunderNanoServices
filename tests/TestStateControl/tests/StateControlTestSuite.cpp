@@ -20,10 +20,10 @@
 /**
  * @file StateControlTestSuite.cpp
  *
- * In-process Google Test suite for the StateControlTest plugin.
+ * In-process Google Test suite for the TestStateControl plugin.
  *
  * ThunderTestRuntime spins up a real PluginHost::Server inside the test
- * process, activates the StateControlTest plugin, and lets us exercise
+ * process, activates the TestStateControl plugin, and lets us exercise
  * IStateControl without any network or out-of-process overhead.
  *
  * Test organisation:

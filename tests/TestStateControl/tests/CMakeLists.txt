@@ -19,7 +19,7 @@
 # thunder_statecontrol_tests
 #
 # In-process GTest suite that exercises IStateControl via ThunderTestRuntime.
-# The StateControlTest plugin shared library must be present on the library
+# The TestStateControl plugin shared library must be present on the library
 # search path (or installed) for the tests to activate the plugin at runtime.
 # ==========================================================================
 
@@ -29,12 +29,12 @@ find_package(GTest QUIET)
 find_package(thunder_test_support QUIET)
 
 if(NOT GTest_FOUND)
-    message(STATUS "${TARGET}: GTest not found — skipping StateControlTest integration tests")
+    message(STATUS "${TARGET}: GTest not found — skipping TestStateControl integration tests")
     return()
 endif()
 
 if(NOT thunder_test_support_FOUND)
-    message(STATUS "${TARGET}: thunder_test_support not found — skipping StateControlTest integration tests. "
+    message(STATUS "${TARGET}: thunder_test_support not found — skipping TestStateControl integration tests. "
                    "Build Thunder with -DENABLE_TEST_RUNTIME=ON and install it first.")
     return()
 endif()

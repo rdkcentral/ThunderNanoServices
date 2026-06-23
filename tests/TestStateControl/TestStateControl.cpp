@@ -52,12 +52,14 @@ namespace Plugin {
 
         _adminLock.Lock();
         _state = PluginHost::IStateControl::EXITED;
-        for (auto& observer : _observers) {
+        std::list<PluginHost::IStateControl::INotification*> snapshot;
+        snapshot.swap(_observers);
+        _adminLock.Unlock();
+
+        for (auto* observer : snapshot) {
             observer->StateChange(PluginHost::IStateControl::EXITED);
             observer->Release();
         }
-        _observers.clear();
-        _adminLock.Unlock();
 
         _service->Release();
         _service = nullptr;
@@ -111,12 +113,26 @@ namespace Plugin {
         }
 
         if (changed) {
-            for (auto& observer : _observers) {
-                observer->StateChange(_state);
+            // Snapshot the observer list under the lock (AddRef each entry) so
+            // callbacks can be invoked without holding _adminLock.  This prevents
+            // a deadlock if an observer calls back into Register/Unregister/State.
+            std::vector<PluginHost::IStateControl::INotification*> snapshot;
+            snapshot.reserve(_observers.size());
+            for (auto* observer : _observers) {
+                observer->AddRef();
+                snapshot.push_back(observer);
             }
-        }
 
-        _adminLock.Unlock();
+            const PluginHost::IStateControl::state currentState = _state;
+            _adminLock.Unlock();
+
+            for (auto* observer : snapshot) {
+                observer->StateChange(currentState);
+                observer->Release();
+            }
+        } else {
+            _adminLock.Unlock();
+        }
     }
 
     void TestStateControl::Register(PluginHost::IStateControl::INotification* notification)
