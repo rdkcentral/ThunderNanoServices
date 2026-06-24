@@ -21,6 +21,10 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+
 #include <interfaces/IVolumeControl.h>
 #include <test_support/ThunderTestRuntime.h>
 
@@ -318,6 +322,86 @@ namespace Tests {
         EXPECT_TRUE(sink.LastMuted());
 
         volumeControl->Release();
+    }
+
+    TEST_F(VolumeControlTest, JsonRpcVolumeNotificationStopsAfterUnsubscribe)
+    {
+        auto link = _runtime.CreateJSONRPCLink(Callsign);
+        ASSERT_TRUE(link.IsValid());
+
+        std::mutex mutex;
+        std::condition_variable condition;
+        uint32_t count = 0;
+        string lastParams;
+
+        const uint32_t subscribeResult = link->Subscribe("volume",
+            [&](const string& /* designator */, const string& /* index */, const string& params) {
+                std::lock_guard<std::mutex> lock(mutex);
+                lastParams = params;
+                count++;
+                condition.notify_one();
+            });
+        ASSERT_EQ(subscribeResult, Core::ERROR_NONE);
+
+        string response;
+        EXPECT_EQ(_runtime.Invoke("VolumeControl.volume", "44", response), Core::ERROR_NONE);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(2), [&] { return (count >= 1); }));
+            EXPECT_EQ(count, 1u);
+            EXPECT_NE(lastParams.find("44"), string::npos);
+        }
+
+        EXPECT_EQ(link->Unsubscribe("volume"), Core::ERROR_NONE);
+
+        EXPECT_EQ(_runtime.Invoke("VolumeControl.volume", "12", response), Core::ERROR_NONE);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            EXPECT_FALSE(condition.wait_for(lock, std::chrono::milliseconds(500), [&] { return (count >= 2); }));
+            EXPECT_EQ(count, 1u);
+        }
+    }
+
+    TEST_F(VolumeControlTest, JsonRpcMutedNotificationStopsAfterUnsubscribe)
+    {
+        auto link = _runtime.CreateJSONRPCLink(Callsign);
+        ASSERT_TRUE(link.IsValid());
+
+        std::mutex mutex;
+        std::condition_variable condition;
+        uint32_t count = 0;
+        string lastParams;
+
+        const uint32_t subscribeResult = link->Subscribe("muted",
+            [&](const string& /* designator */, const string& /* index */, const string& params) {
+                std::lock_guard<std::mutex> lock(mutex);
+                lastParams = params;
+                count++;
+                condition.notify_one();
+            });
+        ASSERT_EQ(subscribeResult, Core::ERROR_NONE);
+
+        string response;
+        EXPECT_EQ(_runtime.Invoke("VolumeControl.muted", "true", response), Core::ERROR_NONE);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            EXPECT_TRUE(condition.wait_for(lock, std::chrono::seconds(2), [&] { return (count >= 1); }));
+            EXPECT_EQ(count, 1u);
+            EXPECT_NE(lastParams.find("true"), string::npos);
+        }
+
+        EXPECT_EQ(link->Unsubscribe("muted"), Core::ERROR_NONE);
+
+        EXPECT_EQ(_runtime.Invoke("VolumeControl.muted", "false", response), Core::ERROR_NONE);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex);
+            EXPECT_FALSE(condition.wait_for(lock, std::chrono::milliseconds(500), [&] { return (count >= 2); }));
+            EXPECT_EQ(count, 1u);
+        }
     }
 
 } // namespace Tests
