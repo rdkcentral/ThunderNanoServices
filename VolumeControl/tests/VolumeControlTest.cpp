@@ -21,6 +21,7 @@
 
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -91,10 +92,10 @@ namespace Tests {
             END_INTERFACE_MAP
 
         private:
-            bool _lastMuted { false };
-            uint8_t _lastVolume { 0 };
-            uint32_t _mutedCount { 0 };
-            uint32_t _volumeCount { 0 };
+            std::atomic<bool> _lastMuted { false };
+            std::atomic<uint8_t> _lastVolume { 0 };
+            std::atomic<uint32_t> _mutedCount { 0 };
+            std::atomic<uint32_t> _volumeCount { 0 };
         };
     }
 
