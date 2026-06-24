@@ -60,8 +60,9 @@ namespace Plugin {
         ASSERT(item != _notifications.end());
 
         if (item != _notifications.end()) {
+            Exchange::IVolumeControl::INotification* entry = *item;
             _notifications.erase(item);
-            (*item)->Release();
+            entry->Release();
         }
         _adminLock.Unlock();
     }
