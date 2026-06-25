@@ -19,6 +19,7 @@ cmake_minimum_required(VERSION 3.15)
 project(NanoServices)
 
 find_package(Thunder)
+include(CTest)
 
 option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)
