@@ -44,6 +44,7 @@ find_package(NEXUS QUIET)
 find_package(NXCLIENT QUIET)
 
 option(RDK_AUDIO_HAL "Link against the RDK audio client" OFF)
+option(VOLUMECONTROL_TESTS "Build VolumeControl integration tests with thunder_test_support" OFF)
 
 add_library(${MODULE_NAME} SHARED
     VolumeControl.cpp
@@ -113,3 +114,7 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()
+
+if(VOLUMECONTROL_TESTS)
+    add_subdirectory(tests)
+endif()
