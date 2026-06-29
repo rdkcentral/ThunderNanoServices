@@ -58,6 +58,29 @@ namespace TestCore {
 namespace Tests {
 
 // ==========================================================================
+// Global test environment – singleton cleanup
+//
+// Core::Singleton::Dispose() must be called exactly once after ALL fixtures
+// have finished. Calling it between fixtures crashes subsequent Initialize()
+// calls because it destroys process-wide infrastructure (WorkerPool, etc.)
+// that the next ThunderTestRuntime::Initialize() depends on.
+//
+// ::testing::AddGlobalTestEnvironment() registers a teardown that GTest
+// runs after the last fixture, without requiring a custom main().
+// ==========================================================================
+namespace {
+struct ScopedSingletonDispose : public ::testing::Environment {
+    void TearDown() override
+    {
+        Core::Singleton::Dispose();
+    }
+};
+
+const ::testing::Environment* const kGlobalEnv =
+    ::testing::AddGlobalTestEnvironment(new ScopedSingletonDispose());
+} // namespace
+
+// ==========================================================================
 // StateObserver – thread-safe IStateControl::INotification implementation
 // ==========================================================================
 
@@ -205,7 +228,6 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
-        Core::Singleton::Dispose();
     }
 
     // ------------------------------------------------------------------
@@ -285,7 +307,6 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
-        Core::Singleton::Dispose();
     }
 
     void SetUp() override
@@ -640,7 +661,6 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
-        Core::Singleton::Dispose();
     }
 
     void SetUp() override
@@ -689,7 +709,6 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
-        Core::Singleton::Dispose();
     }
 
     void SetUp() override
