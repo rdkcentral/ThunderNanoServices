@@ -205,6 +205,7 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
+        Core::Singleton::Dispose();
     }
 
     // ------------------------------------------------------------------
@@ -284,6 +285,7 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
+        Core::Singleton::Dispose();
     }
 
     void SetUp() override
@@ -638,6 +640,7 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
+        Core::Singleton::Dispose();
     }
 
     void SetUp() override
@@ -686,6 +689,7 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
+        Core::Singleton::Dispose();
     }
 
     void SetUp() override
