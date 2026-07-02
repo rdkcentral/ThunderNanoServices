@@ -157,7 +157,7 @@ jobs:
         -DPLUGIN_WEBSHELL=ON \
         -DPLUGIN_WIFICONTROL=ON \
         -DPLUGIN_VOLUMECONTROL=ON \
-        -DVOLUMECONTROL_TESTS=${{matrix.architecture != '32' && 'ON' || 'OFF'}} \
+        -DVOLUMECONTROL_TESTS=${{matrix.architecture == 'tests64' && 'ON' || 'OFF'}} \\
         -DSTORE_TEST=ON \
         -DTEST_AUTOMATION_TOOLS=ON \
         ${{steps.plugins.outputs.first_match}}
