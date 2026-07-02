@@ -48,7 +48,9 @@ jobs:
         else
           PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev"
           PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
-          PKGS="$PKGS libgtest-dev"
+          if [ "${{ matrix.architecture }}" = "tests64" ]; then
+            PKGS="$PKGS libgtest-dev"
+          fi
         fi
         for attempt in {1..4}; do
           if sudo apt-get install -y --no-install-recommends $PKGS; then
@@ -215,4 +217,4 @@ jobs:
         rm ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
 
     - name: Run VolumeControl integration tests
-      run: ctest --test-dir ${{matrix.build_type}}/build/ThunderNanoServices --output-on-failure -R VolumeControlIntegrationTests
+      run: ctest --test-dir ${{matrix.build_type}}/build/ThunderNanoServices --output-on-failure --no-tests=error -R VolumeControlIntegrationTests
