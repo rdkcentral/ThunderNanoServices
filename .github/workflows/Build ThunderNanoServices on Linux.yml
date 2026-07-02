@@ -12,11 +12,11 @@ on:
 
 jobs:
   Thunder:
-    uses: rdkcentral/Thunder/.github/workflows/Linux build template.yml@master
+    uses: rdkcentral/Thunder/.github/workflows/Linux build template.yml@development/actions-tests
 
   ThunderInterfaces:
     needs: Thunder
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@master
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@development/actions-tests
 
   ThunderNanoServices:
     needs: ThunderInterfaces
