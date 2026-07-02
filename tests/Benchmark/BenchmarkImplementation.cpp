@@ -165,7 +165,7 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SendUint32Array(const std::vector<uint32_t>& /* data */) override
+        Core::hresult SendUint32Vector(const std::vector<uint32_t>& /* data */) override
         {
             return Core::ERROR_NONE;
         }
@@ -226,7 +226,7 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SendReceiveUint32Array(const std::vector<uint32_t>& input, std::vector<uint32_t>& output) const override
+        Core::hresult SendReceiveUint32Vector(const std::vector<uint32_t>& input, std::vector<uint32_t>& output) const override
         {
             output = input;
             return Core::ERROR_NONE;

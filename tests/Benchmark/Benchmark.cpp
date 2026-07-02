@@ -415,15 +415,15 @@ namespace Plugin {
             return _payloadProxy->SendReceiveSampleData(in, out);
         }));
 
-        addResult(MeasurePayloadMethod("SendUint32Array", iterations, _memory, [this]() -> uint32_t {
+        addResult(MeasurePayloadMethod("SendUint32Vector", iterations, _memory, [this]() -> uint32_t {
             const std::vector<uint32_t> data = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-            return _payloadProxy->SendUint32Array(data);
+            return _payloadProxy->SendUint32Vector(data);
         }));
 
-        addResult(MeasurePayloadMethod("SendReceiveUint32Array", iterations, _memory, [this]() -> uint32_t {
+        addResult(MeasurePayloadMethod("SendReceiveUint32Vector", iterations, _memory, [this]() -> uint32_t {
             const std::vector<uint32_t> input = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
             std::vector<uint32_t> output;
-            return _payloadProxy->SendReceiveUint32Array(input, output);
+            return _payloadProxy->SendReceiveUint32Vector(input, output);
         }));
 
         addResult(MeasurePayloadMethod("Add", iterations, _memory, [this]() -> uint32_t {
