@@ -30,6 +30,7 @@ option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTTEXTOPTIONS "Utility to verify the name of JSONRPC functions" OFF)
 option(PLUGIN_TESTPRIORITYQUEUE "Utility to verify the PriorityQueue implementation" OFF)
+option(PLUGIN_TESTPLUGIN "Minimal plugin for test_support validation (COM-RPC + JSON-RPC)" OFF)
 option(PLUGIN_TESTSTATECONTROL "Include TestStateControl plugin" OFF)
 
 if(STORE_TEST)
@@ -56,6 +57,10 @@ endif()
 
 if(PLUGIN_TESTPRIORITYQUEUE)
     add_subdirectory(TestPriorityQueue)
+endif()
+
+if(PLUGIN_TESTPLUGIN)
+    add_subdirectory(TestPlugin)
 endif()
 
 if(PLUGIN_TESTSTATECONTROL)
