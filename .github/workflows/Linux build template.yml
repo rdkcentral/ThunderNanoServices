@@ -14,10 +14,10 @@ jobs:
     strategy:
       matrix:
         build_type: [Debug, Release, MinSizeRel]
-        architecture: [32, 64]
+        architecture: [32, 64, tests64]
 
 # --------- Packages & artifacts ---------
-    name: Build type - ${{matrix.build_type}}${{matrix.architecture == '32' && ' x86' || ''}}
+    name: Build type - ${{matrix.build_type}}${{matrix.architecture == 'tests64' && ' tests' || matrix.architecture == '32' && ' x86' || ''}}
     steps:
     - name: Prepare apt (add i386 if needed)
       if: ${{ matrix.architecture == '32' }}
@@ -48,6 +48,9 @@ jobs:
         else
           PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev libgtest-dev"
           PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
+          if [ "${{ matrix.architecture }}" = "tests64" ]; then
+            PKGS="$PKGS libgtest-dev"
+          fi
         fi
         for attempt in {1..4}; do
           if sudo apt-get install -y --no-install-recommends $PKGS; then
@@ -68,7 +71,7 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
-        name: ThunderInterfaces-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
+        name: ThunderInterfaces-${{matrix.build_type}}${{matrix.architecture == 'tests64' && '-test' || matrix.architecture == '32' && '_x86' || ''}}-artifact
         path: ${{matrix.build_type}}
 
     - name: Unpack files
@@ -92,14 +95,21 @@ jobs:
         regex_flags: 'gim'
         search_string: ${{github.event.pull_request.body}}
 
+# Add one line per new test module:
+# echo "TESTS_CMAKE_FLAGS=$TESTS_CMAKE_FLAGS -DFOO_TESTS=ON" >> "$GITHUB_ENV"
+    - name: Set test configuration
+      if: matrix.architecture == 'tests64'
+      run: |
+        echo "TESTS_CMAKE_FLAGS=-DVOLUMECONTROL_TESTS=ON" >> "$GITHUB_ENV"
+
 # ----- Building & uploading -----
     - name: Build ThunderNanoServices
       run: |
         source venv/bin/activate
         ${{matrix.architecture == '32' && 'export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:$PKG_CONFIG_PATH' || 'PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH'}}
         cmake -G Ninja -S ThunderNanoServices -B ${{matrix.build_type}}/build/ThunderNanoServices \
-        -DCMAKE_CXX_FLAGS="-m${{matrix.architecture}}" \
-        -DCMAKE_C_FLAGS="-m${{matrix.architecture}}" \
+        -DCMAKE_CXX_FLAGS="-m${{matrix.architecture == 'tests64' && '64' || matrix.architecture}}" \
+        -DCMAKE_C_FLAGS="-m${{matrix.architecture == 'tests64' && '64' || matrix.architecture}}" \
         -DCMAKE_INSTALL_PREFIX="${{matrix.build_type}}/install/usr" \
         -DCMAKE_MODULE_PATH="${PWD}/${{matrix.build_type}}/install/usr/include/WPEFramework/Modules" \
         -DEXAMPLE_CLIENT_SERVER=ON \
@@ -137,7 +147,7 @@ jobs:
         -DPLUGIN_PERFORMANCEMONITOR=ON \
         -DPLUGIN_PLUGININITIALIZERSERVICE=ON \
         -DPLUGIN_POWER=ON \
-        -DPLUGIN_PROCESSCONTAINERS=ON \
+        -DPLUGIN_PROCESSCONTAINERS=${{matrix.architecture != 'tests64' && 'ON' || 'OFF'}} \
         -DPLUGIN_PROCESSMONITOR=ON \
         -DPLUGIN_REMOTECONTROL=ON \
         -DPLUGIN_RESOURCEMONITOR=ON \
@@ -156,6 +166,7 @@ jobs:
         -DPLUGIN_WEBSHELL=ON \
         -DPLUGIN_WIFICONTROL=ON \
         -DPLUGIN_VOLUMECONTROL=ON \
+        $TESTS_CMAKE_FLAGS \
         -DSTORE_TEST=ON \
         -DTEST_AUTOMATION_TOOLS=ON \
         -DPLUGIN_TESTSTATECONTROL=ON \
@@ -168,5 +179,54 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: ThunderNanoServices-${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}-artifact
+        name: ThunderNanoServices-${{matrix.build_type}}${{matrix.architecture == 'tests64' && '-test' || matrix.architecture == '32' && '_x86' || ''}}-artifact
         path: ${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
+
+# ----- Testing -----
+  Test:
+    needs: ThunderNanoServices
+    runs-on: ubuntu-24.04
+
+    env:
+      # Add the ctest name for each new test module, separated by |
+      TESTS_CTEST_FILTER: "VolumeControlIntegrationTests"
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release, MinSizeRel]
+
+    name: Test - ${{matrix.build_type}}
+    steps:
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        export DEBIAN_FRONTEND=noninteractive
+        for attempt in {1..5}; do
+          if sudo apt-get update -o Acquire::Retries=5 -o Acquire::http::Timeout=30; then
+            break
+          fi
+          echo "apt-get update failed (attempt $attempt), retrying..."
+          sleep $((attempt*10))
+        done
+        for attempt in {1..4}; do
+          if sudo apt-get install -y --no-install-recommends libusb-1.0-0 zlib1g libssl3; then
+            break
+          fi
+          sudo apt-get clean
+          sleep $((attempt*15))
+        done
+
+    - name: Download ThunderNanoServices artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ThunderNanoServices-${{matrix.build_type}}-test-artifact
+        path: ${{matrix.build_type}}
+
+    - name: Unpack files
+      run: |
+        tar -xvzf ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
+        rm ${{matrix.build_type}}/${{matrix.build_type}}.tar.gz
+
+    - name: Run integration tests
+      run: ctest --test-dir ${{matrix.build_type}}/build/ThunderNanoServices --output-on-failure --no-tests=error -R "$TESTS_CTEST_FILTER"
