@@ -100,7 +100,8 @@ jobs:
     - name: Set test configuration
       if: matrix.architecture == 'tests64'
       run: |
-        echo "TESTS_CMAKE_FLAGS=-DVOLUMECONTROL_TESTS=ON" >> "$GITHUB_ENV"
+        echo "TESTS_CMAKE_FLAGS=$TESTS_CMAKE_FLAGS -DVOLUMECONTROL_TESTS=ON" >> "$GITHUB_ENV"
+        echo "TESTS_CMAKE_FLAGS=$TESTS_CMAKE_FLAGS -DTESTSTATECONTROL_TESTS=ON" >> "$GITHUB_ENV"
 
 # ----- Building & uploading -----
     - name: Build ThunderNanoServices
@@ -189,7 +190,7 @@ jobs:
 
     env:
       # Add the ctest name for each new test module, separated by |
-      TESTS_CTEST_FILTER: "VolumeControlIntegrationTests"
+      TESTS_CTEST_FILTER: "VolumeControlIntegrationTests|StateControlIntegrationTests"
 
     strategy:
       matrix:

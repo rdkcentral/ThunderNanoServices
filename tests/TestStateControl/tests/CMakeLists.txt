@@ -16,14 +16,14 @@
 # limitations under the License.
 
 # ==========================================================================
-# thunder_statecontrol_tests
+# StateControlIntegrationTests
 #
 # In-process GTest suite that exercises IStateControl via ThunderTestRuntime.
 # The TestStateControl plugin shared library must be present on the library
 # search path (or installed) for the tests to activate the plugin at runtime.
 # ==========================================================================
 
-set(TARGET thunder_statecontrol_tests)
+set(TARGET StateControlIntegrationTests)
 
 find_package(GTest QUIET)
 find_package(thunder_test_support QUIET)
