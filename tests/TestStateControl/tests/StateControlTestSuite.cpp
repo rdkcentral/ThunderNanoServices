@@ -213,14 +213,12 @@ protected:
     static void SetUpTestSuite()
     {
         ThunderTestRuntime::PluginConfig cfg;
-        cfg.Callsign  = "TestStateControl";
-        cfg.ClassName = "TestStateControl";
-        // Library name as installed by the TestStateControl CMake target:
-        // libThunderTestStateControl.so
-        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
         cfg.Resumed   = false;
 
-        const uint32_t result = _runtime.Initialize({ cfg });
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
         ASSERT_EQ(result, Core::ERROR_NONE)
             << "ThunderTestRuntime failed to initialise (error " << result << ")";
     }
@@ -237,7 +235,7 @@ protected:
     void SetUp() override
     {
         _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
-            "TestStateControl");
+            TESTSTATECONTROL_TEST_CALLSIGN);
         ASSERT_NE(_stateControl, nullptr)
             << "IStateControl must be accessible via QueryInterfaceByCallsign";
     }
@@ -294,12 +292,12 @@ protected:
     static void SetUpTestSuite()
     {
         ThunderTestRuntime::PluginConfig cfg;
-        cfg.Callsign  = "TestStateControl";
-        cfg.ClassName = "TestStateControl";
-        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
         cfg.Resumed   = false;
 
-        const uint32_t result = _runtime.Initialize({ cfg });
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
         ASSERT_EQ(result, Core::ERROR_NONE)
             << "ThunderTestRuntime (InitialState fixture) failed to initialise";
     }
@@ -312,7 +310,7 @@ protected:
     void SetUp() override
     {
         _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
-            "TestStateControl");
+            TESTSTATECONTROL_TEST_CALLSIGN);
         ASSERT_NE(_stateControl, nullptr);
     }
 
@@ -342,14 +340,14 @@ TEST_F(StateControlTestSuite, QueryInterfaceByCallsignReturnsNonNull)
     // _stateControl is already asserted in SetUp; confirm it survives a fresh
     // QueryInterface call so the test result is standalone.
     auto* iface = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
-        "TestStateControl");
+        TESTSTATECONTROL_TEST_CALLSIGN);
     ASSERT_NE(iface, nullptr);
     iface->Release();
 }
 
 TEST_F(StateControlTestSuite, GetShellForPluginIsValid)
 {
-    auto shell = _runtime.GetShell("TestStateControl");
+    auto shell = _runtime.GetShell(TESTSTATECONTROL_TEST_CALLSIGN);
     EXPECT_TRUE(shell.IsValid())
         << "IShell for TestStateControl must be available";
 }
@@ -357,7 +355,7 @@ TEST_F(StateControlTestSuite, GetShellForPluginIsValid)
 TEST_F(StateControlTestSuite, ShellAlsoExposesIPlugin)
 {
     auto* plugin = _runtime.QueryInterfaceByCallsign<PluginHost::IPlugin>(
-        "TestStateControl");
+        TESTSTATECONTROL_TEST_CALLSIGN);
     ASSERT_NE(plugin, nullptr) << "TestStateControl must implement IPlugin";
     plugin->Release();
 }
@@ -647,13 +645,13 @@ protected:
     static void SetUpTestSuite()
     {
         ThunderTestRuntime::PluginConfig cfg;
-        cfg.Callsign  = "TestStateControl";
-        cfg.ClassName = "TestStateControl";
-        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
         // Resumed=true: the framework must call Request(RESUME) after activation.
         cfg.Resumed   = true;
 
-        const uint32_t result = _runtime.Initialize({ cfg });
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
         ASSERT_EQ(result, Core::ERROR_NONE)
             << "ThunderTestRuntime (Resumed=true) failed to initialise";
     }
@@ -666,7 +664,7 @@ protected:
     void SetUp() override
     {
         _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
-            "TestStateControl");
+            TESTSTATECONTROL_TEST_CALLSIGN);
         ASSERT_NE(_stateControl, nullptr);
     }
 
@@ -696,12 +694,12 @@ protected:
     static void SetUpTestSuite()
     {
         ThunderTestRuntime::PluginConfig cfg;
-        cfg.Callsign  = "TestStateControl";
-        cfg.ClassName = "TestStateControl";
-        cfg.Locator   = "libThunderTestStateControl.so";
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
         cfg.Resumed   = true;
 
-        const uint32_t result = _runtime.Initialize({ cfg });
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
         ASSERT_EQ(result, Core::ERROR_NONE)
             << "ThunderTestRuntime (AutoResume fixture) failed to initialise";
     }
@@ -714,7 +712,7 @@ protected:
     void SetUp() override
     {
         _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
-            "TestStateControl");
+            TESTSTATECONTROL_TEST_CALLSIGN);
         ASSERT_NE(_stateControl, nullptr);
     }
 
@@ -754,7 +752,7 @@ TEST_F(StateControlFrameworkAutoResumeFixture, FrameworkAutoResumesPluginWhenRes
 // --------------------------------------------------------------------------
 TEST_F(StateControlFrameworkFixture, ShellResumedReflectsConfigValue)
 {
-    auto shell = _runtime.GetShell("TestStateControl");
+    auto shell = _runtime.GetShell(TESTSTATECONTROL_TEST_CALLSIGN);
     ASSERT_TRUE(shell.IsValid());
     EXPECT_TRUE(shell->Resumed())
         << "IShell::Resumed() must return true when plugin was configured with Resumed=true";
@@ -818,11 +816,11 @@ TEST_F(StateControlFrameworkFixture, NotificationObserverFiresOnResumeAfterFrame
 // --------------------------------------------------------------------------
 TEST_F(StateControlFrameworkFixture, IStateControlReachableViaShellQueryInterface)
 {
-    auto shell = _runtime.GetShell("TestStateControl");
+    auto shell = _runtime.GetShell(TESTSTATECONTROL_TEST_CALLSIGN);
     ASSERT_TRUE(shell.IsValid());
 
     auto* raw = static_cast<PluginHost::IStateControl*>(
-        shell->QueryInterfaceByCallsign(PluginHost::IStateControl::ID, "TestStateControl"));
+        shell->QueryInterfaceByCallsign(PluginHost::IStateControl::ID, TESTSTATECONTROL_TEST_CALLSIGN));
     EXPECT_NE(raw, nullptr)
         << "IStateControl must be reachable via IShell::QueryInterfaceByCallsign "
            "(same path the PluginServer uses)";

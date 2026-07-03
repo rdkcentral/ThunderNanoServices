@@ -44,9 +44,15 @@ add_executable(${TARGET}
     Module.cpp
 )
 
+add_dependencies(${TARGET} ${MODULE_NAME})
+
 target_compile_definitions(${TARGET}
     PRIVATE
         MODULE_NAME=StateControlTestSuite
+        TESTSTATECONTROL_TEST_CALLSIGN="TestStateControl"
+        TESTSTATECONTROL_TEST_CLASSNAME="TestStateControl"
+        TESTSTATECONTROL_TEST_LOCATOR="$<TARGET_FILE_NAME:${MODULE_NAME}>"
+        TESTSTATECONTROL_TEST_PLUGIN_PATH="$<TARGET_FILE_DIR:${MODULE_NAME}>"
 )
 
 if(BUILD_REFERENCE)
@@ -66,3 +72,7 @@ set_target_properties(${TARGET} PROPERTIES
 )
 
 add_test(NAME ${TARGET} COMMAND ${TARGET})
+set_tests_properties(${TARGET} PROPERTIES
+    ENVIRONMENT
+        "LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}:$<TARGET_FILE_DIR:${MODULE_NAME}>:$ENV{LD_LIBRARY_PATH}"
+)
