@@ -11,7 +11,6 @@ on:
     branches: ["master"]
 
 env:
-  common: Thunder\Source\common\common.vcxproj
   commander: ThunderNanoServices\Commander\Commander.vcxproj
   DHCPServer: ThunderNanoServices\DHCPServer\DHCPServer.vcxproj
   DIALServer: ThunderNanoServices\DIALServer\DIALServer.vcxproj
@@ -29,7 +28,7 @@ env:
 
 jobs:
   ThunderNanoServices:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     strategy:
       matrix:
@@ -152,10 +151,6 @@ jobs:
         set "devEnv=%VS_PATH:.exe=.com%"
         cd ThunderOnWindows
         
-        rem Build Thunder common library first (required since Thunder#2137 added common.h pragma)
-        "%devEnv%" /Build "${{matrix.type}}|x${{matrix.version}}" /Project "%common%" "%solution%"
-        if errorlevel 1 exit /b 1
-
         for %%P in (
           "%commander%" "%DHCPServer%" "%DIALServer%" "%dictionary%"
           "%JSONRPCClient%" "%JSONRPCPlugin%" "%networkControl%"

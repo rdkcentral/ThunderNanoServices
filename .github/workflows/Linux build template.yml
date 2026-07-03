@@ -46,7 +46,7 @@ jobs:
           PKGS="$PKGS zlib1g-dev:i386 libssl-dev:i386 libsbc-dev:i386 gcc-13-multilib g++-13-multilib"
           PKGS="$PKGS libicu-dev:i386 libpng-dev:i386 libdrm-dev:i386 libgbm-dev:i386 libegl-dev:i386 libgles2-mesa-dev:i386"
         else
-          PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev libgtest-dev"
+          PKGS="$PKGS zlib1g-dev libssl-dev libsbc-dev"
           PKGS="$PKGS libicu-dev libpng-dev libdrm-dev libgbm-dev libegl-dev libgles2-mesa-dev"
           if [ "${{ matrix.architecture }}" = "tests64" ]; then
             PKGS="$PKGS libgtest-dev"
@@ -95,11 +95,12 @@ jobs:
         regex_flags: 'gim'
         search_string: ${{github.event.pull_request.body}}
 
-# Add one flag per new test module to the TESTS_CMAKE_FLAGS variable below:
+# Add "-DFOO_TESTS=ON" to the FLAGS line below for each new test module
     - name: Set test configuration
       if: matrix.architecture == 'tests64'
       run: |
-        echo "TESTS_CMAKE_FLAGS=$TESTS_CMAKE_FLAGS -DVOLUMECONTROL_TESTS=ON -DTESTSTATECONTROL_TESTS=ON" >> "$GITHUB_ENV"
+        FLAGS="-DVOLUMECONTROL_TESTS=ON -DTESTSTATECONTROL_TESTS=ON"
+        echo "TESTS_CMAKE_FLAGS=$FLAGS" >> "$GITHUB_ENV"
 
 # ----- Building & uploading -----
     - name: Build ThunderNanoServices
