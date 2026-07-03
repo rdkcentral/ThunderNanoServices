@@ -1,0 +1,14 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Benchmark Plugin",
+    "callsign": "Benchmark",
+    "locator": "libThunderBenchmark.so",
+    "status": "alpha",
+    "description": "The Benchmark plugin measures COM-RPC call latency and memory usage for various payload types, with support for threshold-based pass/fail regression detection.",
+    "version": "1.0"
+  },
+  "interface": {
+    "$ref": "{interfacedir}/Benchmark.json#"
+  }
+}
