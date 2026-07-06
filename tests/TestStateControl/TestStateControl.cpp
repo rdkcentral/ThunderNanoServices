@@ -41,12 +41,17 @@ namespace Plugin {
         ASSERT(_service == nullptr);
         _service = service;
         _service->AddRef();
+
+        QualityAssurance::JTestStateControl::Register(*this, this);
+
         return {};
     }
 
     void TestStateControl::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(_service == service);
+
+        QualityAssurance::JTestStateControl::Unregister(*this);
 
         _job.Revoke();
 
@@ -130,6 +135,9 @@ namespace Plugin {
                 observer->StateChange(currentState);
                 observer->Release();
             }
+
+            const string stateStr = StateToString(currentState);
+            QualityAssurance::JTestStateControl::Event::StateChanged(*this, stateStr);
         } else {
             _adminLock.Unlock();
         }
@@ -164,6 +172,70 @@ namespace Plugin {
     }
 
     SERVICE_REGISTRATION(TestStateControl, 1, 0)
+
+    // -------------------------------------------------------------------------
+    // ITestStateControl — JSON-RPC surface
+    // -------------------------------------------------------------------------
+
+    Core::hresult TestStateControl::State(string& state) const
+    {
+        state = StateToString(State());
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult TestStateControl::Request(const string& command)
+    {
+        if (command == "resume") {
+            return Request(PluginHost::IStateControl::RESUME);
+        } else if (command == "suspend") {
+            return Request(PluginHost::IStateControl::SUSPEND);
+        }
+        return Core::ERROR_INCORRECT_URL;
+    }
+
+    Core::hresult TestStateControl::Register(QualityAssurance::ITestStateControl::INotification* notification)
+    {
+        ASSERT(notification != nullptr);
+        _adminLock.Lock();
+        auto it = std::find(_jsonObservers.begin(), _jsonObservers.end(), notification);
+        ASSERT(it == _jsonObservers.end());
+        if (it == _jsonObservers.end()) {
+            notification->AddRef();
+            _jsonObservers.push_back(notification);
+        }
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult TestStateControl::Unregister(QualityAssurance::ITestStateControl::INotification* notification)
+    {
+        ASSERT(notification != nullptr);
+        _adminLock.Lock();
+        auto it = std::find(_jsonObservers.begin(), _jsonObservers.end(), notification);
+        ASSERT(it != _jsonObservers.end());
+        if (it != _jsonObservers.end()) {
+            (*it)->Release();
+            _jsonObservers.erase(it);
+        }
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    // -------------------------------------------------------------------------
+    // Shared helper
+    // -------------------------------------------------------------------------
+
+    // static
+    string TestStateControl::StateToString(PluginHost::IStateControl::state state)
+    {
+        switch (state) {
+        case PluginHost::IStateControl::RESUMED:       return "resumed";
+        case PluginHost::IStateControl::SUSPENDED:     return "suspended";
+        case PluginHost::IStateControl::EXITED:        return "exited";
+        case PluginHost::IStateControl::UNINITIALIZED: // fall-through
+        default:                                       return "uninitialized";
+        }
+    }
 
 } // namespace Plugin
 } // namespace Thunder

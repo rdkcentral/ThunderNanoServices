@@ -46,6 +46,7 @@
 
 #include <gtest/gtest.h>
 #include <plugins/IStateControl.h>
+#include <qa_interfaces/ITestStateControl.h>
 
 #include <atomic>
 #include <chrono>
@@ -827,6 +828,293 @@ TEST_F(StateControlFrameworkFixture, IStateControlReachableViaShellQueryInterfac
     if (raw != nullptr) {
         raw->Release();
     }
+}
+
+// ==========================================================================
+// 6. ITestStateControl COM-RPC surface
+//
+// Verifies that the @json interface is also reachable and functional via
+// direct COM-RPC (QueryInterfaceByCallsign<ITestStateControl>), so the
+// interface map is correct and both consumers (C++ COM-RPC and JSON-RPC)
+// are served by the same implementation.
+// ==========================================================================
+
+class StateControlComRpcFixture : public ::testing::Test {
+protected:
+    static ThunderTestRuntime _runtime;
+    QualityAssurance::ITestStateControl* _iface{ nullptr };
+
+    static void SetUpTestSuite()
+    {
+        ThunderTestRuntime::PluginConfig cfg;
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
+        cfg.Resumed   = false;
+
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
+        ASSERT_EQ(result, Core::ERROR_NONE)
+            << "ThunderTestRuntime (ComRpc fixture) failed to initialise";
+    }
+
+    static void TearDownTestSuite()
+    {
+        _runtime.Deinitialize();
+    }
+
+    void SetUp() override
+    {
+        _iface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestStateControl>(
+            TESTSTATECONTROL_TEST_CALLSIGN);
+        ASSERT_NE(_iface, nullptr)
+            << "ITestStateControl must be reachable via QueryInterfaceByCallsign";
+    }
+
+    void TearDown() override
+    {
+        if (_iface != nullptr) {
+            _iface->Release();
+            _iface = nullptr;
+        }
+    }
+};
+
+ThunderTestRuntime StateControlComRpcFixture::_runtime;
+
+TEST_F(StateControlComRpcFixture, ComRpc_ITestStateControlReachableViaQueryInterface)
+{
+    // SetUp already asserts non-null; confirm it is still valid here
+    EXPECT_NE(_iface, nullptr);
+}
+
+TEST_F(StateControlComRpcFixture, ComRpc_StateReturnsStringCurrentState)
+{
+    string state;
+    EXPECT_EQ(_iface->State(state), Core::ERROR_NONE);
+    EXPECT_EQ(state, "uninitialized")
+        << "Initial COM-RPC state must be 'uninitialized'";
+}
+
+TEST_F(StateControlComRpcFixture, ComRpc_RequestResumeChangesStateThroughInterface)
+{
+    EXPECT_EQ(_iface->Request("resume"), Core::ERROR_NONE);
+
+    // The state change is dispatched asynchronously; poll via the same interface
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2000);
+    string state;
+    while (std::chrono::steady_clock::now() < deadline) {
+        _iface->State(state);
+        if (state == "resumed") break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    EXPECT_EQ(state, "resumed")
+        << "State must be 'resumed' after COM-RPC Request('resume')";
+}
+
+TEST_F(StateControlComRpcFixture, ComRpc_RequestSuspendChangesStateThroughInterface)
+{
+    // Drive to RESUMED first so we have a deterministic starting point
+    EXPECT_EQ(_iface->Request("resume"), Core::ERROR_NONE);
+    string state;
+    const auto r_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2000);
+    while (std::chrono::steady_clock::now() < r_deadline) {
+        _iface->State(state);
+        if (state == "resumed") break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    EXPECT_EQ(_iface->Request("suspend"), Core::ERROR_NONE);
+    const auto s_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(2000);
+    while (std::chrono::steady_clock::now() < s_deadline) {
+        _iface->State(state);
+        if (state == "suspended") break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    EXPECT_EQ(state, "suspended")
+        << "State must be 'suspended' after COM-RPC Request('suspend')";
+}
+
+TEST_F(StateControlComRpcFixture, ComRpc_UnknownCommandReturnsError)
+{
+    EXPECT_NE(_iface->Request("fly"), Core::ERROR_NONE)
+        << "Unknown command must return non-zero error via COM-RPC";
+}
+
+// ==========================================================================
+// 7. JSON-RPC surface (ITestStateControl via CreateJSONRPCLink)
+//
+// Exercises the @json-generated stubs: state property GET, request method,
+// and stateChanged event subscription — all via the JSONRPCLink in-process
+// transport rather than HTTP, so no network or daemon is needed.
+// ==========================================================================
+
+class StateControlJsonRpcFixture : public ::testing::Test {
+protected:
+    static ThunderTestRuntime _runtime;
+    PluginHost::IStateControl* _stateControl{ nullptr };
+
+    static void SetUpTestSuite()
+    {
+        ThunderTestRuntime::PluginConfig cfg;
+        cfg.Callsign  = TESTSTATECONTROL_TEST_CALLSIGN;
+        cfg.ClassName = TESTSTATECONTROL_TEST_CLASSNAME;
+        cfg.Locator   = TESTSTATECONTROL_TEST_LOCATOR;
+        cfg.Resumed   = false;
+
+        const uint32_t result = _runtime.Initialize({ cfg }, TESTSTATECONTROL_TEST_PLUGIN_PATH);
+        ASSERT_EQ(result, Core::ERROR_NONE)
+            << "ThunderTestRuntime (JsonRpc fixture) failed to initialise";
+    }
+
+    static void TearDownTestSuite()
+    {
+        _runtime.Deinitialize();
+    }
+
+    void SetUp() override
+    {
+        _stateControl = _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(
+            TESTSTATECONTROL_TEST_CALLSIGN);
+        ASSERT_NE(_stateControl, nullptr);
+    }
+
+    void TearDown() override
+    {
+        if (_stateControl != nullptr) {
+            _stateControl->Release();
+            _stateControl = nullptr;
+        }
+    }
+};
+
+ThunderTestRuntime StateControlJsonRpcFixture::_runtime;
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_StatePropertyReturnsCurrentState)
+{
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    string response;
+    const uint32_t result = link->Invoke("state", "", response);
+    EXPECT_EQ(result, Core::ERROR_NONE) << "state property GET failed: " << result;
+    EXPECT_NE(response.find("uninitialized"), string::npos)
+        << "initial state must be 'uninitialized', got: " << response;
+}
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_RequestResumeChangesState)
+{
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    string response;
+    const uint32_t result = link->Invoke("request", R"({"command":"resume"})", response);
+    EXPECT_EQ(result, Core::ERROR_NONE) << "request(resume) failed: " << result;
+
+    EXPECT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::RESUMED))
+        << "State must reach RESUMED after JSON-RPC request(resume)";
+
+    string stateResp;
+    EXPECT_EQ(link->Invoke("state", "", stateResp), Core::ERROR_NONE);
+    EXPECT_NE(stateResp.find("resumed"), string::npos)
+        << "state property must reflect RESUMED, got: " << stateResp;
+}
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_RequestSuspendChangesState)
+{
+    // Drive to RESUMED first so we have a known starting point
+    ASSERT_EQ(_stateControl->Request(PluginHost::IStateControl::RESUME), Core::ERROR_NONE);
+    ASSERT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::RESUMED));
+
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    string response;
+    const uint32_t result = link->Invoke("request", R"({"command":"suspend"})", response);
+    EXPECT_EQ(result, Core::ERROR_NONE) << "request(suspend) failed: " << result;
+
+    EXPECT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::SUSPENDED))
+        << "State must reach SUSPENDED after JSON-RPC request(suspend)";
+}
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_UnknownCommandReturnsError)
+{
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    string response;
+    const uint32_t result = link->Invoke("request", R"({"command":"fly"})", response);
+    EXPECT_NE(result, Core::ERROR_NONE)
+        << "Unknown command must return an error, got ERROR_NONE";
+}
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_StateChangedEventFiredOnTransition)
+{
+    // Drive to SUSPENDED so we can trigger a RESUME → event
+    ASSERT_EQ(_stateControl->Request(PluginHost::IStateControl::SUSPEND), Core::ERROR_NONE);
+    ASSERT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::SUSPENDED));
+
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    std::mutex mtx;
+    std::condition_variable cv;
+    string receivedState;
+    bool eventFired = false;
+
+    const uint32_t subResult = link->Subscribe(
+        "stateChanged",
+        [&](const string& /*designator*/, const string& /*index*/, const string& params) {
+            std::lock_guard<std::mutex> lock(mtx);
+            receivedState = params;
+            eventFired = true;
+            cv.notify_one();
+        });
+    ASSERT_EQ(subResult, Core::ERROR_NONE) << "Subscribe to stateChanged failed";
+
+    string response;
+    link->Invoke("request", R"({"command":"resume"})", response);
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        const bool received = cv.wait_for(lock, std::chrono::milliseconds(2000),
+            [&] { return eventFired; });
+        EXPECT_TRUE(received) << "stateChanged event not received within timeout";
+        EXPECT_NE(receivedState.find("resumed"), string::npos)
+            << "stateChanged event must carry 'resumed', got: " << receivedState;
+    }
+
+    link->Unsubscribe("stateChanged");
+}
+
+TEST_F(StateControlJsonRpcFixture, JsonRpc_NoEventAfterUnsubscribe)
+{
+    ASSERT_EQ(_stateControl->Request(PluginHost::IStateControl::RESUME), Core::ERROR_NONE);
+    ASSERT_TRUE(WaitForState(_stateControl, PluginHost::IStateControl::RESUMED));
+
+    auto link = _runtime.CreateJSONRPCLink(TESTSTATECONTROL_TEST_CALLSIGN);
+    ASSERT_TRUE(link.IsValid());
+
+    std::mutex mtx;
+    std::condition_variable cv;
+    bool eventFired = false;
+
+    link->Subscribe("stateChanged",
+        [&](const string& /*designator*/, const string& /*index*/, const string& /*params*/) {
+            std::lock_guard<std::mutex> lock(mtx);
+            eventFired = true;
+            cv.notify_one();
+        });
+
+    link->Unsubscribe("stateChanged");
+
+    string response;
+    link->Invoke("request", R"({"command":"suspend"})", response);
+    WaitForState(_stateControl, PluginHost::IStateControl::SUSPENDED);
+
+    std::unique_lock<std::mutex> lock(mtx);
+    const bool received = cv.wait_for(lock, std::chrono::milliseconds(300),
+        [&] { return eventFired; });
+    EXPECT_FALSE(received) << "stateChanged event must not fire after Unsubscribe";
 }
 
 } // namespace Tests

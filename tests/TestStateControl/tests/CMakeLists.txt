@@ -64,6 +64,7 @@ target_link_libraries(${TARGET}
         thunder_test_support::thunder_test_support
         GTest::gtest
         GTest::gtest_main
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 
 set_target_properties(${TARGET} PROPERTIES

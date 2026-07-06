@@ -21,12 +21,17 @@
 
 #include "Module.h"
 
+#include <qa_interfaces/ITestStateControl.h>
+#include <qa_interfaces/json/JTestStateControl.h>
+
 namespace Thunder {
 namespace Plugin {
 
     class TestStateControl
         : public PluginHost::IPlugin
-        , public PluginHost::IStateControl {
+        , public PluginHost::IStateControl
+        , public PluginHost::JSONRPC
+        , public QualityAssurance::ITestStateControl {
 
         friend Core::ThreadPool::JobType<TestStateControl&>;
 
@@ -41,6 +46,7 @@ PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
             , _state(PluginHost::IStateControl::UNINITIALIZED)
             , _requestedCommand(PluginHost::IStateControl::SUSPEND)
             , _observers()
+            , _jsonObservers()
             , _job(*this)
         {
         }
@@ -51,6 +57,8 @@ POP_WARNING()
         BEGIN_INTERFACE_MAP(TestStateControl)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IStateControl)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_ENTRY(QualityAssurance::ITestStateControl)
         END_INTERFACE_MAP
 
     public:
@@ -66,14 +74,22 @@ POP_WARNING()
         void Register(PluginHost::IStateControl::INotification* notification) override;
         void Unregister(PluginHost::IStateControl::INotification* notification) override;
 
+        // ITestStateControl
+        Core::hresult State(string& state) const override;
+        Core::hresult Request(const string& command) override;
+        Core::hresult Register(QualityAssurance::ITestStateControl::INotification* notification) override;
+        Core::hresult Unregister(QualityAssurance::ITestStateControl::INotification* notification) override;
+
     private:
         void Dispatch();
+        static string StateToString(PluginHost::IStateControl::state state);
 
         mutable Core::CriticalSection _adminLock;
         PluginHost::IShell* _service;
         PluginHost::IStateControl::state _state;
         PluginHost::IStateControl::command _requestedCommand;
         std::list<PluginHost::IStateControl::INotification*> _observers;
+        std::list<QualityAssurance::ITestStateControl::INotification*> _jsonObservers;
         Core::WorkerPool::JobType<TestStateControl&> _job;
     };
 
