@@ -16,7 +16,7 @@ jobs:
 
   ThunderInterfaces:
     needs: Thunder
-    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@development/StateControlTestPlugin #temporary change for new interface header
+    uses: rdkcentral/ThunderInterfaces/.github/workflows/Linux build template.yml@master
 
   ThunderNanoServices:
     needs: ThunderInterfaces
