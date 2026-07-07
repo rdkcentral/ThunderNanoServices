@@ -190,7 +190,7 @@ namespace Plugin {
         } else if (command == "suspend") {
             return Request(PluginHost::IStateControl::SUSPEND);
         }
-        return Core::ERROR_INCORRECT_URL;
+        return Core::ERROR_UNKNOWN_KEY;
     }
 
     Core::hresult TestStateControl::Register(QualityAssurance::ITestStateControl::INotification* notification)
@@ -226,6 +226,10 @@ namespace Plugin {
     // -------------------------------------------------------------------------
 
     // static
+    // Maps the IStateControl enum to the string contract defined in
+    // ITestStateControl::State().  "resumed" and "suspended" match the
+    // production StateControl JSON-RPC schema; "uninitialized" and "exited"
+    // are additional values exposed only by this QA interface.
     string TestStateControl::StateToString(PluginHost::IStateControl::state state)
     {
         switch (state) {
