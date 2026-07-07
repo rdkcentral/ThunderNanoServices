@@ -42,7 +42,7 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
-        QualityAssurance::JTestStateControl::Register(*this, this);
+        PluginHost::JStateController::Register(*this, this);
 
         return {};
     }
@@ -51,7 +51,7 @@ namespace Plugin {
     {
         ASSERT(_service == service);
 
-        QualityAssurance::JTestStateControl::Unregister(*this);
+        PluginHost::JStateController::Unregister(*this);
 
         _job.Revoke();
 
@@ -59,10 +59,16 @@ namespace Plugin {
         _state = PluginHost::IStateControl::EXITED;
         std::list<PluginHost::IStateControl::INotification*> snapshot;
         snapshot.swap(_observers);
+        std::list<PluginHost::IStateController::INotification*> controllerSnapshot;
+        controllerSnapshot.swap(_controllerObservers);
         _adminLock.Unlock();
 
         for (auto* observer : snapshot) {
             observer->StateChange(PluginHost::IStateControl::EXITED);
+            observer->Release();
+        }
+        for (auto* observer : controllerSnapshot) {
+            observer->StateChanged(PluginHost::IStateController::UNKNOWN);
             observer->Release();
         }
 
@@ -136,8 +142,7 @@ namespace Plugin {
                 observer->Release();
             }
 
-            const string stateStr = StateToString(currentState);
-            QualityAssurance::JTestStateControl::Event::StateChanged(*this, stateStr);
+            PluginHost::JStateController::Event::StateChanged(*this, ToControllerState(currentState));
         } else {
             _adminLock.Unlock();
         }
@@ -174,48 +179,45 @@ namespace Plugin {
     SERVICE_REGISTRATION(TestStateControl, 1, 0)
 
     // -------------------------------------------------------------------------
-    // ITestStateControl — JSON-RPC surface
+    // IStateController — JSON-RPC surface
     // -------------------------------------------------------------------------
 
-    Core::hresult TestStateControl::State(string& state) const
+    Core::hresult TestStateControl::State(PluginHost::IStateController::state& state) const
     {
-        state = StateToString(State());
+        state = ToControllerState(State());
         return Core::ERROR_NONE;
     }
 
-    Core::hresult TestStateControl::Request(const string& command)
+    Core::hresult TestStateControl::Request(const PluginHost::IStateController::command command)
     {
-        if (command == "resume") {
-            return Request(PluginHost::IStateControl::RESUME);
-        } else if (command == "suspend") {
-            return Request(PluginHost::IStateControl::SUSPEND);
-        }
-        return Core::ERROR_UNKNOWN_KEY;
+        return Request(command == PluginHost::IStateController::RESUME
+            ? PluginHost::IStateControl::RESUME
+            : PluginHost::IStateControl::SUSPEND);
     }
 
-    Core::hresult TestStateControl::Register(QualityAssurance::ITestStateControl::INotification* notification)
+    Core::hresult TestStateControl::Register(PluginHost::IStateController::INotification* notification)
     {
         ASSERT(notification != nullptr);
         _adminLock.Lock();
-        auto it = std::find(_jsonObservers.begin(), _jsonObservers.end(), notification);
-        ASSERT(it == _jsonObservers.end());
-        if (it == _jsonObservers.end()) {
+        auto it = std::find(_controllerObservers.begin(), _controllerObservers.end(), notification);
+        ASSERT(it == _controllerObservers.end());
+        if (it == _controllerObservers.end()) {
             notification->AddRef();
-            _jsonObservers.push_back(notification);
+            _controllerObservers.push_back(notification);
         }
         _adminLock.Unlock();
         return Core::ERROR_NONE;
     }
 
-    Core::hresult TestStateControl::Unregister(QualityAssurance::ITestStateControl::INotification* notification)
+    Core::hresult TestStateControl::Unregister(const PluginHost::IStateController::INotification* notification)
     {
         ASSERT(notification != nullptr);
         _adminLock.Lock();
-        auto it = std::find(_jsonObservers.begin(), _jsonObservers.end(), notification);
-        ASSERT(it != _jsonObservers.end());
-        if (it != _jsonObservers.end()) {
+        auto it = std::find(_controllerObservers.begin(), _controllerObservers.end(), notification);
+        ASSERT(it != _controllerObservers.end());
+        if (it != _controllerObservers.end()) {
             (*it)->Release();
-            _jsonObservers.erase(it);
+            _controllerObservers.erase(it);
         }
         _adminLock.Unlock();
         return Core::ERROR_NONE;
@@ -226,18 +228,14 @@ namespace Plugin {
     // -------------------------------------------------------------------------
 
     // static
-    // Maps the IStateControl enum to the string contract defined in
-    // ITestStateControl::State().  "resumed" and "suspended" match the
-    // production StateControl JSON-RPC schema; "uninitialized" and "exited"
-    // are additional values exposed only by this QA interface.
-    string TestStateControl::StateToString(PluginHost::IStateControl::state state)
+    // Maps IStateControl::state to IStateController::state.
+    // UNINITIALIZED and EXITED have no direct counterpart; both map to UNKNOWN.
+    PluginHost::IStateController::state TestStateControl::ToControllerState(PluginHost::IStateControl::state state)
     {
         switch (state) {
-        case PluginHost::IStateControl::RESUMED:       return "resumed";
-        case PluginHost::IStateControl::SUSPENDED:     return "suspended";
-        case PluginHost::IStateControl::EXITED:        return "exited";
-        case PluginHost::IStateControl::UNINITIALIZED: // fall-through
-        default:                                       return "uninitialized";
+        case PluginHost::IStateControl::RESUMED:    return PluginHost::IStateController::RESUMED;
+        case PluginHost::IStateControl::SUSPENDED:  return PluginHost::IStateController::SUSPENDED;
+        default:                                    return PluginHost::IStateController::UNKNOWN;
         }
     }
 
