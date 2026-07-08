@@ -32,6 +32,7 @@ option(PLUGIN_TESTTEXTOPTIONS "Utility to verify the name of JSONRPC functions" 
 option(PLUGIN_TESTPRIORITYQUEUE "Utility to verify the PriorityQueue implementation" OFF)
 option(PLUGIN_TESTPLUGIN "Minimal plugin for test_support validation (COM-RPC + JSON-RPC)" OFF)
 option(PLUGIN_BENCHMARK "Include Benchmark plugin for COM-RPC performance measurement and regression detection" OFF)
+option(PLUGIN_TESTSTATECONTROL "Include TestStateControl plugin" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -66,3 +67,8 @@ endif()
 if(PLUGIN_BENCHMARK)
     add_subdirectory(Benchmark)
 endif()
+
+if(PLUGIN_TESTSTATECONTROL)
+    add_subdirectory(TestStateControl)
+endif()
+
