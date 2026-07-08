@@ -81,7 +81,7 @@ jobs:
 
 # ----- Regex & checkout -----
     - name: Checkout ThunderNanoServices
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         path: ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
@@ -95,8 +95,7 @@ jobs:
         regex_flags: 'gim'
         search_string: ${{github.event.pull_request.body}}
 
-# Add one line per new test module:
-# echo "TESTS_CMAKE_FLAGS=$TESTS_CMAKE_FLAGS -DFOO_TESTS=ON" >> "$GITHUB_ENV"
+# Add "-DFOO_TESTS=ON" to the line below for each new test module
     - name: Set test configuration
       if: matrix.architecture == 'tests64'
       run: |
