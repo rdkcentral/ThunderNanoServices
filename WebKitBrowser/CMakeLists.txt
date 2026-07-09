@@ -18,6 +18,8 @@
 set(PLUGIN_NAME WebKitBrowser)
 set(MODULE_NAME ${NAMESPACE}${PLUGIN_NAME})
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 option(PLUGIN_WEBKITBROWSER_YOUTUBE "Include YouTube in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_APPS "Include Apps instance in seperate plugin." OFF)
 option(PLUGIN_WEBKITBROWSER_UX "Include UX in seperate plugin." OFF)
@@ -32,6 +34,7 @@ set(PLUGIN_WEBKITBROWSER_MEDIADISKCACHE false CACHE STRING "Media Disk Cache")
 set(PLUGIN_WEBKITBROWSER_MSEBUFFERS "audio:2m,video:15m,text:1m" CACHE STRING "MSE Buffers for WebKit")
 set(PLUGIN_WEBKITBROWSER_DISKCACHE "0" CACHE STRING "Disk Cache")
 set(PLUGIN_WEBKITBROWSER_XHRCACHE true CACHE STRING "XHR Cache")
+set(PLUGIN_WEBKITBROWSER_EXTENSION_DIRECTORY "Extension" CACHE STRING "Directory to store extension libraries")
 set(PLUGIN_WEBKITBROWSER_LOCALSTORAGE "" CACHE STRING "HTML5 local storage path")
 set(PLUGIN_WEBKITBROWSER_COOKIESTORAGE "" CACHE STRING "Browser cookie storage path")
 set(PLUGIN_WEBKITBROWSER_WINDOWCLOSE false CACHE STRING "Allow window close")
@@ -58,8 +61,10 @@ add_library(${MODULE_NAME} SHARED
     WebKitBrowser.cpp
     WebKitBrowserJsonRpc.cpp
     WebKitImplementation.cpp
-    InjectedBundle/Tags.cpp
+    Tags.cpp
 )
+
+add_subdirectory(Extension)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
         CXX_STANDARD 11
@@ -70,10 +75,9 @@ target_link_libraries(${MODULE_NAME}
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${WPE_BACKEND_LIBRARIES}
-        ${GLIB_LIBRARIES}
-        ${WPE_WEBKIT_LIBRARIES}
-        ${SECURITY_TOKEN_LIBRARY})
+        WPEBackend::WPEBackend
+        WPEWebKit::WPEWebKit
+)
 
 target_include_directories(${MODULE_NAME}
     PRIVATE
@@ -86,13 +90,17 @@ if(WPE_WEBKIT_DEPRECATED_API)
     target_compile_definitions(${MODULE_NAME} PRIVATE WPE_WEBKIT_DEPRECATED_API=${WPE_WEBKIT_DEPRECATED_API})
 endif()
 
+if(WEBKIT_GLIB_API)
+    target_compile_definitions(${MODULE_NAME} PRIVATE WEBKIT_GLIB_API)
+endif()
+
 install(
     TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${MODULE_NAME})
 
 # also build injected bundle
-add_subdirectory(InjectedBundle)
+# add_subdirectory(InjectedBundle)
 
 # resolution handling
 if(PLUGIN_WEBKITBROWSER_RESOLUTION EQUAL "720p")
