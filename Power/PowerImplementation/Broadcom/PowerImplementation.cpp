@@ -216,7 +216,9 @@ void PowerImplementation::Init()
 
         _pmContext = brcm_pm_init();
 
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
         NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
+#endif
     }
 }
 

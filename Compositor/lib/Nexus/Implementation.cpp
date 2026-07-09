@@ -27,6 +27,8 @@
 #include <nxclient.h>
 #endif
 
+#undef PLATFORM
+
 #include "NexusServer/Settings.h"
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
@@ -443,7 +445,9 @@ namespace Plugin {
         {
             if ((_joined == false) && (NxClient_Join(&_joinSettings) == NEXUS_SUCCESS)) {
                 _joined = true;
+#if NEXUS_PLATFORM_VERSION_MAJOR > 14
                 NxClient_UnregisterAcknowledgeStandby(NxClient_RegisterAcknowledgeStandby());
+#endif
             }
             return (_joined);
         }
