@@ -23,6 +23,7 @@
 #include <qa_interfaces/IBenchmark.h>
 #include <interfaces/IMemory.h>
 #include <qa_interfaces/IBenchmarkPayload.h>
+#include <atomic>
 #include <map>
 #include <vector>
 
@@ -126,6 +127,7 @@ namespace Plugin {
         std::vector<QualityAssurance::IBenchmark::INotification*> _notifications;
         uint32_t _maxLatencyDeviationPct;
         uint64_t _maxMemoryGrowthBytes;
+        std::atomic_flag _triggerRunning = ATOMIC_FLAG_INIT;
     };
 
 } // namespace Plugin

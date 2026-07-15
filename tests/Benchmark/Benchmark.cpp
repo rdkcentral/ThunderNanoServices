@@ -140,10 +140,13 @@ namespace Plugin {
         // Read CLOCK_MONOTONIC directly for true nanosecond resolution.
         // Core::StopWatch uses SystemInfo::Ticks() which returns microseconds;
         // multiplying by 1000 gives µs-precision values dressed as ns.
+        // Returns 0 on clock_gettime failure; callers must treat 0 as invalid.
         inline uint64_t NowNs()
         {
-            struct timespec ts;
-            ::clock_gettime(CLOCK_MONOTONIC, &ts);
+            struct timespec ts{};
+            if (::clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+                return 0;
+            }
             return static_cast<uint64_t>(ts.tv_sec) * UINT64_C(1000000000) + static_cast<uint64_t>(ts.tv_nsec);
         }
 
@@ -162,13 +165,22 @@ namespace Plugin {
             for (uint32_t i = 0; i < iterations; i++) {
                 const uint64_t t0 = NowNs();
                 uint32_t hr = fn();
-                const uint64_t elapsed = NowNs() - t0;
+                const uint64_t t1 = NowNs();
                 if (hr != Core::ERROR_NONE) {
                     SYSLOG(Logging::Error, (_T("COM-RPC call '%s' failed on iteration %u with error 0x%08X"),
                         apiName.c_str(), i, hr));
                     break;
                 }
-                acc.Record(elapsed);
+                // Skip sample if either clock read failed (returns 0) or the clock regressed.
+                // Each iteration pays two clock_gettime calls (t0 and t1); for very fast
+                // in-process calls this overhead is a significant part of the measured interval.
+                if (t0 == 0 || t1 == 0 || t1 < t0) {
+                    SYSLOG(Logging::Warning, (_T("Clock anomaly on '%s' iteration %u — sample skipped"),
+                        apiName.c_str(), i));
+                    completedIterations++;
+                    continue;
+                }
+                acc.Record(t1 - t0);
                 completedIterations++;
             }
 
@@ -303,6 +315,11 @@ namespace Plugin {
 
     Core::hresult Benchmark::Trigger(const uint32_t iterations)
     {
+        // Reject concurrent triggers: interleaved results would corrupt the result set
+        // and produce an incorrect allPassed evaluation.
+        if (_triggerRunning.test_and_set()) {
+            return Core::ERROR_INPROGRESS;
+        }
         _adminLock.Lock();
         _results.clear();
         _adminLock.Unlock();
@@ -325,7 +342,9 @@ namespace Plugin {
         QualityAssurance::JBenchmark::Event::PerformanceCheckCompleted(*this);
 
         TRACE(Trace::Information, (_T("Benchmark completed: %u iterations via COM-RPC proxy"), iterations));
-        return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+        const Core::hresult hr = allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
+        _triggerRunning.clear();
+        return hr;
     }
 
     Core::hresult Benchmark::CollectData(QualityAssurance::IBenchmark::IBenchmarkResultIterator*& report) const
