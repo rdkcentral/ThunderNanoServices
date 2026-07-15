@@ -192,8 +192,9 @@ namespace Plugin {
             result.iterations = completedIterations;
             result.roundTrip = acc.Stats();
             // avgNs comes from the per-call accumulator (same source as min/max/stddev),
-            // which keeps all four stats consistent. The per-call elapsed already
-            // measures fn() + one clock_gettime call, giving nanosecond precision.
+            // which keeps all four stats consistent. Each elapsed sample covers
+            // fn() + two clock_gettime() calls (t0 and t1); for very fast in-process
+            // calls this overhead is a measurable part of the interval.
             // (No batch-time override: that introduced avgNs > maxNs on fast in-process calls.)
             result.memory.residentBefore = residentBefore;
             result.memory.residentAfter = residentAfter;
