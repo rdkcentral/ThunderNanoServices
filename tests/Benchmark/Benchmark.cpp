@@ -125,8 +125,8 @@ namespace Plugin {
                     double diff = static_cast<double>(v) - static_cast<double>(avg);
                     variance += diff * diff;
                 }
-                // sample variance (n-1) for unbiased stddev; fall back to n when only 1 sample
-                if (n > 1) variance /= static_cast<double>(n - 1);
+                // sample variance (n-1); falls back to n when n==1 (n>0 guaranteed by early return above)
+                variance /= static_cast<double>(n > 1 ? n - 1 : n);
 
                 stats.minNs    = minVal;
                 stats.avgNs    = avg;
@@ -377,7 +377,7 @@ namespace Plugin {
 
     Core::hresult Benchmark::Register(QualityAssurance::IBenchmark::INotification* sink)
     {
-        ASSERT(sink != nullptr);
+        if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
         _adminLock.Lock();
         auto it = std::find(_notifications.begin(), _notifications.end(), sink);
         if (it == _notifications.end()) {
@@ -390,7 +390,7 @@ namespace Plugin {
 
     Core::hresult Benchmark::Unregister(QualityAssurance::IBenchmark::INotification* sink)
     {
-        ASSERT(sink != nullptr);
+        if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
         _adminLock.Lock();
         auto it = std::find(_notifications.begin(), _notifications.end(), sink);
         if (it != _notifications.end()) {
