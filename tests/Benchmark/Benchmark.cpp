@@ -160,7 +160,8 @@ namespace Plugin {
             uint64_t allocatedBefore = memory->Allocated();
 
             LatencyAccumulator acc;
-            uint32_t completedIterations = 0;
+            uint32_t samplesRecorded = 0;   // iterations with a valid timing sample in acc
+            uint32_t fnCallsSucceeded = 0;  // fn() calls that returned ERROR_NONE
 
             for (uint32_t i = 0; i < iterations; i++) {
                 const uint64_t t0 = NowNs();
@@ -171,17 +172,17 @@ namespace Plugin {
                         apiName.c_str(), i, hr));
                     break;
                 }
+                fnCallsSucceeded++;
                 // Skip sample if either clock read failed (returns 0) or the clock regressed.
                 // Each iteration pays two clock_gettime calls (t0 and t1); for very fast
                 // in-process calls this overhead is a significant part of the measured interval.
                 if (t0 == 0 || t1 == 0 || t1 < t0) {
-                    SYSLOG(Logging::Warning, (_T("Clock anomaly on '%s' iteration %u — sample skipped"),
+                    SYSLOG(Logging::Error, (_T("Clock anomaly on '%s' iteration %u -- sample skipped"),
                         apiName.c_str(), i));
-                    completedIterations++;
                     continue;
                 }
                 acc.Record(t1 - t0);
-                completedIterations++;
+                samplesRecorded++;
             }
 
             uint64_t residentAfter = memory->Resident();
@@ -189,18 +190,16 @@ namespace Plugin {
 
             QualityAssurance::IBenchmark::BenchmarkResult result{};
             result.apiName = apiName;
-            result.iterations = completedIterations;
+            // iterations = number of timing samples in roundTrip (consistent with the stats).
+            // passed checks fnCallsSucceeded so a run with clock anomalies (skipped samples)
+            // still fails correctly rather than masking the partial data as a success.
+            result.iterations = samplesRecorded;
             result.roundTrip = acc.Stats();
-            // avgNs comes from the per-call accumulator (same source as min/max/stddev),
-            // which keeps all four stats consistent. Each elapsed sample covers
-            // fn() + two clock_gettime() calls (t0 and t1); for very fast in-process
-            // calls this overhead is a measurable part of the interval.
-            // (No batch-time override: that introduced avgNs > maxNs on fast in-process calls.)
-            result.memory.residentBefore = residentBefore;
-            result.memory.residentAfter = residentAfter;
+            result.passed = (fnCallsSucceeded == iterations);
+            result.memory.residentBefore  = residentBefore;
+            result.memory.residentAfter   = residentAfter;
             result.memory.allocatedBefore = allocatedBefore;
-            result.memory.allocatedAfter = allocatedAfter;
-            result.passed = (completedIterations == iterations);
+            result.memory.allocatedAfter  = allocatedAfter;
 
             return result;
         }
