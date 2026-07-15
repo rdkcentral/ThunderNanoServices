@@ -191,11 +191,12 @@ namespace Plugin {
             QualityAssurance::IBenchmark::BenchmarkResult result{};
             result.apiName = apiName;
             // iterations = number of timing samples in roundTrip (consistent with the stats).
-            // passed checks fnCallsSucceeded so a run with clock anomalies (skipped samples)
-            // still fails correctly rather than masking the partial data as a success.
+            // passed requires both: all fn() calls succeeded AND every iteration produced a
+            // valid timing sample. A skipped sample means partial/unreliable data, so the
+            // result is marked failed even if the underlying COM-RPC calls all succeeded.
             result.iterations = samplesRecorded;
             result.roundTrip = acc.Stats();
-            result.passed = (fnCallsSucceeded == iterations);
+            result.passed = (fnCallsSucceeded == iterations) && (samplesRecorded == fnCallsSucceeded);
             result.memory.residentBefore  = residentBefore;
             result.memory.residentAfter   = residentAfter;
             result.memory.allocatedBefore = allocatedBefore;
@@ -231,8 +232,6 @@ namespace Plugin {
             }
 
             if (result.empty()) {
-                QualityAssurance::JBenchmark::Register(*this, this);
-
                 if (_connectionId == 0) {
                     _memory = Thunder::BenchmarkMemory::MemoryObserver(nullptr);
                 } else {
@@ -248,6 +247,12 @@ namespace Plugin {
 
                 if (_memory == nullptr && result.empty()) {
                     result = _T("Benchmark could not instantiate a Memory observer!");
+                }
+
+                // Register JSON-RPC only after all fallible init steps have succeeded.
+                // This prevents a partially initialised object from being reachable.
+                if (result.empty()) {
+                    QualityAssurance::JBenchmark::Register(*this, this);
                 }
             }
         }
