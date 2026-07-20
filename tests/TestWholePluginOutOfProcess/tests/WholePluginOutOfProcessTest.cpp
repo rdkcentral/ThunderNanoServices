@@ -38,7 +38,7 @@ namespace Tests {
             plugin.Callsign = Callsign;
             plugin.ClassName = ClassName;
             plugin.Locator = Locator;
-            plugin.StartMode = PluginHost::IShell::startmode::ACTIVATED;
+            plugin.StartMode = PluginHost::IShell::startmode::DEACTIVATED;
 
             if (wholePluginOutOfProcess == true) {
                 plugin.Root.Mode = Plugin::Config::RootConfig::ModeType::LOCAL;
@@ -47,15 +47,18 @@ namespace Tests {
             return plugin;
         }
 
-        void ExpectPluginActivated(TestCore::ThunderTestRuntime& runtime, const uint32_t expectedConfigureResult)
+        void ActivatePlugin(PluginHost::IShell* shell)
         {
-            Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
-            ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
+            ASSERT_NE(shell, nullptr) << "Expected TestWholePluginOutOfProcess shell to be registered";
+            ASSERT_EQ(shell->Activate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE) << "Expected TestWholePluginOutOfProcess to activate";
             EXPECT_EQ(shell->State(), PluginHost::IShell::state::ACTIVATED) << "Expected TestWholePluginOutOfProcess to activate";
+        }
 
+        void ExpectConfigurationResult(TestCore::ThunderTestRuntime& runtime, PluginHost::IShell* shell, const uint32_t expectedConfigureResult)
+        {
             Exchange::IConfiguration* configuration = runtime.QueryInterfaceByCallsign<Exchange::IConfiguration>(Callsign);
             ASSERT_NE(configuration, nullptr) << "Expected TestWholePluginOutOfProcess to expose IConfiguration";
-            EXPECT_EQ(configuration->Configure(shell.operator->()), expectedConfigureResult);
+            EXPECT_EQ(configuration->Configure(shell), expectedConfigureResult);
             configuration->Release();
         }
 
@@ -65,7 +68,10 @@ namespace Tests {
             const uint32_t result = runtime.Initialize({ CreatePluginConfig(wholePluginOutOfProcess) }, PluginPath);
             ASSERT_EQ(result, Core::ERROR_NONE) << "Failed to initialize Thunder runtime for " << Callsign;
 
-            ExpectPluginActivated(runtime, wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
+            Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
+            ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
+            ActivatePlugin(shell.operator->());
+            ExpectConfigurationResult(runtime, shell.operator->(), wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
 
             runtime.Deinitialize();
         }
