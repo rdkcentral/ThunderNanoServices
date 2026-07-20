@@ -22,6 +22,9 @@
 #include <gtest/gtest.h>
 #include <test_support/ThunderTestRuntime.h>
 
+#include <chrono>
+#include <thread>
+
 namespace Thunder {
 namespace Plugin {
 namespace Tests {
@@ -31,6 +34,8 @@ namespace Tests {
         constexpr const char* ClassName = TESTWHOLEPLUGINOUTOFPROCESS_TEST_CLASSNAME;
         constexpr const char* Locator = TESTWHOLEPLUGINOUTOFPROCESS_TEST_LOCATOR;
         constexpr const char* PluginPath = TESTWHOLEPLUGINOUTOFPROCESS_TEST_PLUGIN_PATH;
+        constexpr std::chrono::milliseconds ActivationTimeout{ 2000 };
+        constexpr std::chrono::milliseconds PollInterval{ 10 };
 
         TestCore::ThunderTestRuntime::PluginConfig CreatePluginConfig(const bool wholePluginOutOfProcess)
         {
@@ -38,7 +43,7 @@ namespace Tests {
             plugin.Callsign = Callsign;
             plugin.ClassName = ClassName;
             plugin.Locator = Locator;
-            plugin.StartMode = PluginHost::IShell::startmode::DEACTIVATED;
+            plugin.StartMode = PluginHost::IShell::startmode::ACTIVATED;
 
             if (wholePluginOutOfProcess == true) {
                 plugin.Root.Mode = Plugin::Config::RootConfig::ModeType::LOCAL;
@@ -47,11 +52,17 @@ namespace Tests {
             return plugin;
         }
 
-        void ActivatePlugin(PluginHost::IShell* shell)
+        bool WaitForActivated(PluginHost::IShell* shell)
         {
-            ASSERT_NE(shell, nullptr) << "Expected TestWholePluginOutOfProcess shell to be registered";
-            ASSERT_EQ(shell->Activate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE) << "Expected TestWholePluginOutOfProcess to activate";
-            EXPECT_EQ(shell->State(), PluginHost::IShell::state::ACTIVATED) << "Expected TestWholePluginOutOfProcess to activate";
+            const auto deadline = std::chrono::steady_clock::now() + ActivationTimeout;
+            while (std::chrono::steady_clock::now() < deadline) {
+                if (shell->State() == PluginHost::IShell::state::ACTIVATED) {
+                    return true;
+                }
+                std::this_thread::sleep_for(PollInterval);
+            }
+
+            return (shell->State() == PluginHost::IShell::state::ACTIVATED);
         }
 
         void ExpectConfigurationResult(TestCore::ThunderTestRuntime& runtime, PluginHost::IShell* shell, const uint32_t expectedConfigureResult)
@@ -70,7 +81,7 @@ namespace Tests {
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
             ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
-            ActivatePlugin(shell.operator->());
+            ASSERT_TRUE(WaitForActivated(shell.operator->())) << "Expected TestWholePluginOutOfProcess to activate, got state " << static_cast<uint16_t>(shell->State());
             ExpectConfigurationResult(runtime, shell.operator->(), wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
 
             runtime.Deinitialize();
