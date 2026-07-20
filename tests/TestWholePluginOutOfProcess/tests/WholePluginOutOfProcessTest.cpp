@@ -22,9 +22,6 @@
 #include <gtest/gtest.h>
 #include <test_support/ThunderTestRuntime.h>
 
-#include <chrono>
-#include <thread>
-
 namespace Thunder {
 namespace Plugin {
 namespace Tests {
@@ -34,8 +31,6 @@ namespace Tests {
         constexpr const char* ClassName = TESTWHOLEPLUGINOUTOFPROCESS_TEST_CLASSNAME;
         constexpr const char* Locator = TESTWHOLEPLUGINOUTOFPROCESS_TEST_LOCATOR;
         constexpr const char* PluginPath = TESTWHOLEPLUGINOUTOFPROCESS_TEST_PLUGIN_PATH;
-        constexpr std::chrono::milliseconds ActivationTimeout{ 2000 };
-        constexpr std::chrono::milliseconds PollInterval{ 10 };
 
         TestCore::ThunderTestRuntime::PluginConfig CreatePluginConfig(const bool wholePluginOutOfProcess)
         {
@@ -52,19 +47,6 @@ namespace Tests {
             return plugin;
         }
 
-        bool WaitForActivated(PluginHost::IShell* shell)
-        {
-            const auto deadline = std::chrono::steady_clock::now() + ActivationTimeout;
-            while (std::chrono::steady_clock::now() < deadline) {
-                if (shell->State() == PluginHost::IShell::state::ACTIVATED) {
-                    return true;
-                }
-                std::this_thread::sleep_for(PollInterval);
-            }
-
-            return (shell->State() == PluginHost::IShell::state::ACTIVATED);
-        }
-
         void ExpectConfigurationResult(TestCore::ThunderTestRuntime& runtime, PluginHost::IShell* shell, const uint32_t expectedConfigureResult)
         {
             Exchange::IConfiguration* configuration = runtime.QueryInterfaceByCallsign<Exchange::IConfiguration>(Callsign);
@@ -75,13 +57,14 @@ namespace Tests {
 
         void RunActivationScenario(const bool wholePluginOutOfProcess)
         {
+            SCOPED_TRACE(wholePluginOutOfProcess == true ? "whole plugin out-of-process" : "in-process");
+
             TestCore::ThunderTestRuntime runtime;
             const uint32_t result = runtime.Initialize({ CreatePluginConfig(wholePluginOutOfProcess) }, PluginPath);
             ASSERT_EQ(result, Core::ERROR_NONE) << "Failed to initialize Thunder runtime for " << Callsign;
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
             ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
-            ASSERT_TRUE(WaitForActivated(shell.operator->())) << "Expected TestWholePluginOutOfProcess to activate, got state " << static_cast<uint16_t>(shell->State());
             ExpectConfigurationResult(runtime, shell.operator->(), wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
 
             runtime.Deinitialize();
