@@ -33,6 +33,7 @@ option(PLUGIN_TESTPRIORITYQUEUE "Utility to verify the PriorityQueue implementat
 option(PLUGIN_TESTPLUGIN "Minimal plugin for test_support validation (COM-RPC + JSON-RPC)" OFF)
 option(PLUGIN_BENCHMARK "Include Benchmark plugin for COM-RPC performance measurement and regression detection" OFF)
 option(PLUGIN_TESTSTATECONTROL "Include TestStateControl plugin" OFF)
+option(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS "Include TestWholePluginOutOfProcess plugin" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -72,3 +73,6 @@ if(PLUGIN_TESTSTATECONTROL)
     add_subdirectory(TestStateControl)
 endif()
 
+if(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS)
+    add_subdirectory(TestWholePluginOutOfProcess)
+endif()

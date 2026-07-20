@@ -99,7 +99,7 @@ jobs:
     - name: Set test configuration
       if: matrix.architecture == 'tests64'
       run: |
-        FLAGS="-DVOLUMECONTROL_TESTS=ON -DTESTSTATECONTROL_TESTS=ON"
+        FLAGS="-DVOLUMECONTROL_TESTS=ON -DTESTSTATECONTROL_TESTS=ON -DTESTWHOLEPLUGINOUTOFPROCESS_TESTS=ON"
         echo "TESTS_CMAKE_FLAGS=$FLAGS" >> "$GITHUB_ENV"
 
 # ----- Building & uploading -----
@@ -158,6 +158,7 @@ jobs:
         -DPLUGIN_SYSTEMCOMMANDS=ON \
         -DPLUGIN_TESTCONTROLLER=ON \
         -DPLUGIN_TESTPRIORITYQUEUE=ON \
+        -DPLUGIN_TESTWHOLEPLUGINOUTOFPROCESS=ON \
         -DPLUGIN_TESTTEXTOPTIONS=ON \
         -DPLUGIN_TESTUTILITY=ON \
         -DPLUGIN_TIMESYNC=ON \
@@ -189,7 +190,7 @@ jobs:
 
     env:
       # Add the ctest name for each new test module, separated by |
-      TESTS_CTEST_FILTER: "VolumeControlIntegrationTests|StateControlIntegrationTests"
+      TESTS_CTEST_FILTER: "VolumeControlIntegrationTests|StateControlIntegrationTests|WholePluginOutOfProcessIntegrationTests"
 
     strategy:
       matrix:

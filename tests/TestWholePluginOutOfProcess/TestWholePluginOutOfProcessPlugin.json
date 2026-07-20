@@ -1,0 +1,16 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "TestWholePluginOutOfProcess Plugin",
+    "callsign": "TestWholePluginOutOfProcess",
+    "locator": "libThunderTestWholePluginOutOfProcess.so",
+    "status": "development",
+    "description": [
+      ""
+    ],
+    "version": "1.0"
+  },
+  "interface": {
+    "$cppref": "{cppinterfacedir}/IConfiguration.h"
+  }
+}
