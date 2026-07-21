@@ -47,20 +47,18 @@ namespace Tests {
             return plugin;
         }
 
-        void ExpectMathJsonRpc(TestCore::ThunderTestRuntime& runtime)
+        void ExpectMathInterface(TestCore::ThunderTestRuntime& runtime)
         {
-            Core::ProxyType<TestCore::ThunderTestRuntime::JSONRPCLink> link = runtime.CreateJSONRPCLink(Callsign);
-            ASSERT_TRUE(link.IsValid()) << "Expected TestWholePluginOutOfProcess to expose JSON-RPC";
+            Exchange::IMath* math = runtime.QueryInterfaceByCallsign<Exchange::IMath>(Callsign);
+            ASSERT_NE(math, nullptr) << "Expected TestWholePluginOutOfProcess to expose IMath";
 
-            string response;
-            const string params = _T("{\"a\":7,\"b\":5}");
+            uint16_t result = 0;
+            EXPECT_EQ(math->Add(7, 5, result), Core::ERROR_NONE);
+            EXPECT_EQ(result, 12);
+            EXPECT_EQ(math->Sub(7, 5, result), Core::ERROR_NONE);
+            EXPECT_EQ(result, 2);
 
-            EXPECT_EQ(link->Invoke("add", params, response), Core::ERROR_NONE);
-            EXPECT_EQ(response, _T("12"));
-
-            response.clear();
-            EXPECT_EQ(link->Invoke("sub", params, response), Core::ERROR_NONE);
-            EXPECT_EQ(response, _T("2"));
+            math->Release();
         }
 
         void RunActivationScenario(const bool wholePluginOutOfProcess)
@@ -73,7 +71,7 @@ namespace Tests {
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
             ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
-            ExpectMathJsonRpc(runtime);
+            ExpectMathInterface(runtime);
 
             runtime.Deinitialize();
         }
