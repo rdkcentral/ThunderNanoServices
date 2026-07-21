@@ -31,6 +31,7 @@ namespace Tests {
         constexpr const char* ClassName = TESTWHOLEPLUGINOUTOFPROCESS_TEST_CLASSNAME;
         constexpr const char* Locator = TESTWHOLEPLUGINOUTOFPROCESS_TEST_LOCATOR;
         constexpr const char* PluginPath = TESTWHOLEPLUGINOUTOFPROCESS_TEST_PLUGIN_PATH;
+        constexpr const char* ProxyStubPath = TESTWHOLEPLUGINOUTOFPROCESS_TEST_PROXYSTUB_PATH;
 
         TestCore::ThunderTestRuntime::PluginConfig CreatePluginConfig(const bool wholePluginOutOfProcess)
         {
@@ -66,7 +67,7 @@ namespace Tests {
             SCOPED_TRACE(wholePluginOutOfProcess == true ? "whole plugin out-of-process" : "in-process");
 
             TestCore::ThunderTestRuntime runtime;
-            const uint32_t result = runtime.Initialize({ CreatePluginConfig(wholePluginOutOfProcess) }, PluginPath);
+            const uint32_t result = runtime.Initialize({ CreatePluginConfig(wholePluginOutOfProcess) }, PluginPath, ProxyStubPath);
             ASSERT_EQ(result, Core::ERROR_NONE) << "Failed to initialize Thunder runtime for " << Callsign;
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
