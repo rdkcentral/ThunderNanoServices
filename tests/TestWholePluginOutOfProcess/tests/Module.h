@@ -24,7 +24,7 @@
 #endif
 
 #include <plugins/plugins.h>
-#include <interfaces/IConfiguration.h>
+#include <interfaces/IMath.h>
 
 #undef EXTERNAL
 #define EXTERNAL

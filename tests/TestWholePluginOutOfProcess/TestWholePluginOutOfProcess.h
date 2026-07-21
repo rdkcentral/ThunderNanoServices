@@ -20,12 +20,12 @@
 #pragma once
 
 #include "Module.h"
-#include <interfaces/IConfiguration.h>
+#include <interfaces/IMath.h>
 
 namespace Thunder {
 namespace Plugin {
 
-    class TestWholePluginOutOfProcess : public PluginHost::IPlugin, public Exchange::IConfiguration {
+    class TestWholePluginOutOfProcess : public PluginHost::IPlugin, public PluginHost::JSONRPC, public Exchange::IMath {
     public:
         TestWholePluginOutOfProcess(const TestWholePluginOutOfProcess&) = delete;
         TestWholePluginOutOfProcess& operator=(const TestWholePluginOutOfProcess&) = delete;
@@ -34,7 +34,8 @@ namespace Plugin {
 
         TestWholePluginOutOfProcess()
             : PluginHost::IPlugin()
-            , Exchange::IConfiguration()
+            , PluginHost::JSONRPC()
+            , Exchange::IMath()
         {
         }
 
@@ -44,13 +45,14 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-        // IConfiguration methods
-
-        uint32_t Configure(PluginHost::IShell* framework) override;
+        // IMath methods
+        uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum /* @out */) const override;
+        uint32_t Sub(const uint16_t A, const uint16_t B, uint16_t& difference /* @out */) const override;
 
         BEGIN_INTERFACE_MAP(TestWholePluginOutOfProcess)
             INTERFACE_ENTRY(PluginHost::IPlugin)
-            INTERFACE_ENTRY(Exchange::IConfiguration)
+            INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_ENTRY(Exchange::IMath)
         END_INTERFACE_MAP
 
     };

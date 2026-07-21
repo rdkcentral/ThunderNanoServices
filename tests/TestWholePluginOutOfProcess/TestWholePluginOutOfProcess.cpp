@@ -18,6 +18,7 @@
 */
 
 #include "TestWholePluginOutOfProcess.h"
+#include <interfaces/json/JMath.h>
 
 namespace Thunder {
 namespace Plugin {
@@ -40,18 +41,28 @@ namespace Plugin {
         string message;
 
         ASSERT(service != nullptr);
+        Exchange::JMath::Register(*this, this);
         return (message);
     }
 
     void TestWholePluginOutOfProcess::Deinitialize(VARIABLE_IS_NOT_USED PluginHost::IShell* service) {
+        Exchange::JMath::Unregister(*this);
     }
 
     string TestWholePluginOutOfProcess::Information() const {
         return (string());
     }
 
-    uint32_t TestWholePluginOutOfProcess::Configure(PluginHost::IShell* framework) {
-        return ((framework != nullptr) && (framework->IsInterfaceSupported(PluginHost::IShell::ICOMLink::ID) == true) ? Core::ERROR_NONE : Core::ERROR_NOT_SUPPORTED);
+    uint32_t TestWholePluginOutOfProcess::Add(const uint16_t A, const uint16_t B, uint16_t& sum) const
+    {
+        sum = static_cast<uint16_t>(A + B);
+        return Core::ERROR_NONE;
+    }
+
+    uint32_t TestWholePluginOutOfProcess::Sub(const uint16_t A, const uint16_t B, uint16_t& difference) const
+    {
+        difference = static_cast<uint16_t>(A - B);
+        return Core::ERROR_NONE;
     }
 
 } // Plugin

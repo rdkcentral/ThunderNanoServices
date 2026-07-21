@@ -47,12 +47,20 @@ namespace Tests {
             return plugin;
         }
 
-        void ExpectConfigurationResult(TestCore::ThunderTestRuntime& runtime, PluginHost::IShell* shell, const uint32_t expectedConfigureResult)
+        void ExpectMathJsonRpc(TestCore::ThunderTestRuntime& runtime)
         {
-            Exchange::IConfiguration* configuration = runtime.QueryInterfaceByCallsign<Exchange::IConfiguration>(Callsign);
-            ASSERT_NE(configuration, nullptr) << "Expected TestWholePluginOutOfProcess to expose IConfiguration";
-            EXPECT_EQ(configuration->Configure(shell), expectedConfigureResult);
-            configuration->Release();
+            Core::ProxyType<TestCore::ThunderTestRuntime::JSONRPCLink> link = runtime.CreateJSONRPCLink(Callsign);
+            ASSERT_TRUE(link.IsValid()) << "Expected TestWholePluginOutOfProcess to expose JSON-RPC";
+
+            string response;
+            const string params = _T("{\"a\":7,\"b\":5}");
+
+            EXPECT_EQ(link->Invoke("add", params, response), Core::ERROR_NONE);
+            EXPECT_EQ(response, _T("12"));
+
+            response.clear();
+            EXPECT_EQ(link->Invoke("sub", params, response), Core::ERROR_NONE);
+            EXPECT_EQ(response, _T("2"));
         }
 
         void RunActivationScenario(const bool wholePluginOutOfProcess)
@@ -65,7 +73,7 @@ namespace Tests {
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
             ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
-            ExpectConfigurationResult(runtime, shell.operator->(), wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
+            ExpectMathJsonRpc(runtime);
 
             runtime.Deinitialize();
         }
