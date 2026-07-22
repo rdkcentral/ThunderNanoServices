@@ -53,6 +53,19 @@ namespace Plugin {
         return (string());
     }
 
+    uint32_t TestWholePluginOutOfProcess::Configure(PluginHost::IShell* framework)
+    {
+        uint32_t result = Core::ERROR_NOT_SUPPORTED;
+        if (framework != nullptr) {
+            PluginHost::IShell::ICOMLink* comLink = framework->QueryInterface<PluginHost::IShell::ICOMLink>();
+            if (comLink != nullptr) {
+                comLink->Release();
+                result = Core::ERROR_NONE;
+            }
+        }
+        return result;
+    }
+
     uint32_t TestWholePluginOutOfProcess::Add(const uint16_t A, const uint16_t B, uint16_t& sum) const
     {
         sum = static_cast<uint16_t>(A + B);

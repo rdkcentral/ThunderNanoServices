@@ -19,6 +19,7 @@
 
 #include "Module.h"
 
+#include <interfaces/IConfiguration.h>
 #include <gtest/gtest.h>
 #include <test_support/ThunderTestRuntime.h>
 
@@ -62,6 +63,18 @@ namespace Tests {
             math->Release();
         }
 
+        void ExpectProcessMode(TestCore::ThunderTestRuntime& runtime, PluginHost::IShell* shell, const bool wholePluginOutOfProcess)
+        {
+            Exchange::IConfiguration* configuration = runtime.QueryInterfaceByCallsign<Exchange::IConfiguration>(Callsign);
+            ASSERT_NE(configuration, nullptr) << "Expected TestWholePluginOutOfProcess to expose IConfiguration";
+
+            const uint32_t configureResult = configuration->Configure(shell);
+            configuration->Release();
+
+            const uint32_t expectedResult = (wholePluginOutOfProcess == true ? Core::ERROR_NOT_SUPPORTED : Core::ERROR_NONE);
+            EXPECT_EQ(configureResult, expectedResult);
+        }
+
         void RunActivationScenario(const bool wholePluginOutOfProcess)
         {
             SCOPED_TRACE(wholePluginOutOfProcess == true ? "whole plugin out-of-process" : "in-process");
@@ -72,6 +85,7 @@ namespace Tests {
 
             Core::ProxyType<PluginHost::IShell> shell = runtime.GetShell(Callsign);
             ASSERT_TRUE(shell.IsValid()) << "Expected TestWholePluginOutOfProcess shell to be registered";
+            ExpectProcessMode(runtime, shell.operator->(), wholePluginOutOfProcess);
             ExpectMathInterface(runtime);
 
             runtime.Deinitialize();

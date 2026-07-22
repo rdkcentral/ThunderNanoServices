@@ -10,7 +10,12 @@
     ],
     "version": "1.0"
   },
-  "interface": {
-    "$cppref": "{cppinterfacedir}/IMath.h"
-  }
+  "interface": [
+    {
+      "$cppref": "{cppinterfacedir}/IConfiguration.h"
+    },
+    {
+      "$cppref": "{cppinterfacedir}/IMath.h"
+    }
+  ]
 }
