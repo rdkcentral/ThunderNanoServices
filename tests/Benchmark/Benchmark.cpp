@@ -502,7 +502,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    Core::hresult Benchmark::SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* baseline)
+    Core::hresult Benchmark::SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* const& baseline)
     {
         if (baseline == nullptr) return Core::ERROR_BAD_REQUEST;
         _adminLock.Lock();
