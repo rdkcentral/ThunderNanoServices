@@ -83,7 +83,7 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        Core::hresult SetBaseline(IBenchmarkResultIterator* const& /* baseline */) override
+        Core::hresult SetBaseline(IBenchmarkResultIterator* /* baseline */) override
         {
             // Baseline management is handled on the plugin shell side.
             return Core::ERROR_NONE;
