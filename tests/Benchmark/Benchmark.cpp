@@ -140,14 +140,18 @@ namespace Plugin {
         // Read CLOCK_MONOTONIC directly for true nanosecond resolution.
         // Core::StopWatch uses SystemInfo::Ticks() which returns microseconds;
         // multiplying by 1000 gives µs-precision values dressed as ns.
-        // Returns 0 on clock_gettime failure; callers must treat 0 as invalid.
+        // Returns 0 on clock_gettime failure; 0 is an unambiguous sentinel because
+        // successful timestamps are biased by +1 so the value is always >= 1.
+        // CLOCK_MONOTONIC can legally return 0 very early after boot, so without
+        // the bias the first sample(s) would be incorrectly discarded as failures.
         inline uint64_t NowNs()
         {
             struct timespec ts{};
             if (::clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
                 return 0;
             }
-            return static_cast<uint64_t>(ts.tv_sec) * UINT64_C(1000000000) + static_cast<uint64_t>(ts.tv_nsec);
+            // Add 1 so a legal all-zero reading is never confused with the failure sentinel.
+            return static_cast<uint64_t>(ts.tv_sec) * UINT64_C(1000000000) + static_cast<uint64_t>(ts.tv_nsec) + 1;
         }
 
         template<typename CALLABLE>
@@ -205,6 +209,75 @@ namespace Plugin {
             return result;
         }
 
+        // JSON-RPC params for setBaseline — mirrors the collectData result format
+        // so the caller can pass custom collectData output directly.
+        // Extra fields (minNs, maxNs, stddevNs, passed, failureReason, iterations) are accepted
+        // but ignored; only apiName, roundTrip.avgNs and memory.resident* are used.
+        struct BaselineEntryData : public Core::JSON::Container {
+            struct RoundTripData : public Core::JSON::Container {
+                RoundTripData() : Core::JSON::Container() { _Init(); }
+                // Move constructor: default-construct Container, move data, re-register fields.
+                // (Core::JSON::Container has a deleted move constructor, so the base must be
+                //  default-constructed; this pattern is used by all generated JSON types.)
+                RoundTripData(RoundTripData&& other) noexcept
+                    : Core::JSON::Container(), AvgNs(std::move(other.AvgNs)) { _Init(); }
+                Core::JSON::DecUInt64 AvgNs;
+            private:
+                void _Init() { Add(_T("avgNs"), &AvgNs); }
+            };
+
+            struct MemData : public Core::JSON::Container {
+                MemData() : Core::JSON::Container() { _Init(); }
+                MemData(MemData&& other) noexcept
+                    : Core::JSON::Container()
+                    , ResidentBefore(std::move(other.ResidentBefore))
+                    , ResidentAfter(std::move(other.ResidentAfter)) { _Init(); }
+                Core::JSON::DecUInt64 ResidentBefore;
+                Core::JSON::DecUInt64 ResidentAfter;
+            private:
+                void _Init() {
+                    Add(_T("residentBefore"), &ResidentBefore);
+                    Add(_T("residentAfter"),  &ResidentAfter);
+                }
+            };
+
+            BaselineEntryData() : Core::JSON::Container() { _Init(); }
+            BaselineEntryData(BaselineEntryData&& other) noexcept
+                : Core::JSON::Container()
+                , ApiName(std::move(other.ApiName))
+                , RoundTrip(std::move(other.RoundTrip))
+                , Memory(std::move(other.Memory)) { _Init(); }
+
+            bool IsDataValid() const { return ApiName.IsSet(); }
+            Core::JSON::String ApiName;
+            RoundTripData      RoundTrip;
+            MemData            Memory;
+        private:
+            void _Init() {
+                Add(_T("apiName"),   &ApiName);
+                Add(_T("roundTrip"), &RoundTrip);
+                Add(_T("memory"),    &Memory);
+            }
+        };
+
+        struct SetBaselineParamsData : public Core::JSON::Container {
+            SetBaselineParamsData() : Core::JSON::Container() { Add(_T("baseline"), &Baseline); }
+            bool IsDataValid() const { return Baseline.IsSet(); }
+            Core::JSON::ArrayType<BaselineEntryData> Baseline;
+        };
+
+        // RAII guard for _triggerRunning — clears the flag on scope exit regardless
+        // of how the function returns, preventing the plugin from getting stuck in
+        // ERROR_INPROGRESS if an early-return path is added in the future.
+        struct TriggerGuard {
+            explicit TriggerGuard(std::atomic_flag& flag) : _flag(flag) {}
+            TriggerGuard(const TriggerGuard&) = delete;
+            TriggerGuard& operator=(const TriggerGuard&) = delete;
+            ~TriggerGuard() { _flag.clear(); }
+        private:
+            std::atomic_flag& _flag;
+        };
+
     } // anonymous namespace
 
     const string Benchmark::Initialize(PluginHost::IShell* service)
@@ -253,6 +326,33 @@ namespace Plugin {
                 // This prevents a partially initialised object from being reachable.
                 if (result.empty()) {
                     QualityAssurance::JBenchmark::Register(*this, this);
+
+                    // setBaseline is a supplementary method not in the generated JBenchmark
+                    // glue. It accepts the same array format that collectData returns.
+                    PluginHost::JSONRPC::Register<SetBaselineParamsData, void>(_T("setBaseline"),
+                        [this](const SetBaselineParamsData& params) -> uint32_t {
+                            if (!params.IsSet() || !params.IsDataValid()) return Core::ERROR_BAD_REQUEST;
+                            _adminLock.Lock();
+                            _baselines.clear();
+                            auto iter = params.Baseline.Elements();
+                            while (iter.Next() == true) {
+                                const BaselineEntryData& entry = iter.Current();
+                                if (!entry.ApiName.IsSet()) continue;
+                                QualityAssurance::IBenchmark::BenchmarkResult r{};
+                                r.apiName = static_cast<string>(entry.ApiName);
+                                if (entry.RoundTrip.AvgNs.IsSet())
+                                    r.roundTrip.avgNs = static_cast<uint64_t>(entry.RoundTrip.AvgNs);
+                                if (entry.Memory.ResidentBefore.IsSet())
+                                    r.memory.residentBefore = static_cast<uint64_t>(entry.Memory.ResidentBefore);
+                                if (entry.Memory.ResidentAfter.IsSet())
+                                    r.memory.residentAfter = static_cast<uint64_t>(entry.Memory.ResidentAfter);
+                                _baselines[r.apiName] = r;
+                            }
+                            _adminLock.Unlock();
+                            TRACE(Trace::Information, (_T("Manual baseline set with %u entries"),
+                                static_cast<uint32_t>(_baselines.size())));
+                            return Core::ERROR_NONE;
+                        });
                 }
             }
         }
@@ -273,6 +373,7 @@ namespace Plugin {
 
         if (_benchmark != nullptr) {
             QualityAssurance::JBenchmark::Unregister(*this);
+            PluginHost::JSONRPC::Unregister(_T("setBaseline"));
 
             _adminLock.Lock();
             for (auto* sink : _notifications) {
@@ -320,11 +421,15 @@ namespace Plugin {
 
     Core::hresult Benchmark::Trigger(const uint32_t iterations)
     {
+        if (iterations == 0) {
+            return Core::ERROR_BAD_REQUEST;
+        }
         // Reject concurrent triggers: interleaved results would corrupt the result set
         // and produce an incorrect allPassed evaluation.
         if (_triggerRunning.test_and_set()) {
             return Core::ERROR_INPROGRESS;
         }
+        TriggerGuard guard(_triggerRunning);
         _adminLock.Lock();
         _results.clear();
         _adminLock.Unlock();
@@ -347,9 +452,7 @@ namespace Plugin {
         QualityAssurance::JBenchmark::Event::PerformanceCheckCompleted(*this);
 
         TRACE(Trace::Information, (_T("Benchmark completed: %u iterations via COM-RPC proxy"), iterations));
-        const Core::hresult hr = allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
-        _triggerRunning.clear();
-        return hr;
+        return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
     }
 
     Core::hresult Benchmark::CollectData(QualityAssurance::IBenchmark::IBenchmarkResultIterator*& report) const
@@ -396,6 +499,21 @@ namespace Plugin {
         _adminLock.Lock();
         maxMemoryGrowthBytes = _maxMemoryGrowthBytes;
         _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* baseline)
+    {
+        if (baseline == nullptr) return Core::ERROR_BAD_REQUEST;
+        _adminLock.Lock();
+        _baselines.clear();
+        QualityAssurance::IBenchmark::BenchmarkResult entry{};
+        while (baseline->Next(entry) == true) {
+            _baselines[entry.apiName] = entry;
+        }
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Manual baseline set via COM-RPC with %u entries"),
+            static_cast<uint32_t>(_baselines.size())));
         return Core::ERROR_NONE;
     }
 

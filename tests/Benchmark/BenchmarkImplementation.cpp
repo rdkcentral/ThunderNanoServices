@@ -83,6 +83,12 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
+        Core::hresult SetBaseline(IBenchmarkResultIterator* /* baseline */) override
+        {
+            // Baseline management is handled on the plugin shell side.
+            return Core::ERROR_NONE;
+        }
+
         Core::hresult Register(IBenchmark::INotification* sink) override
         {
             _adminLock.Lock();

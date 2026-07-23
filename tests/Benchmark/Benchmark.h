@@ -106,6 +106,7 @@ namespace Plugin {
         Core::hresult LatencyThreshold(uint32_t& maxLatencyDeviationPct) const override;
         Core::hresult MemoryThreshold(const uint64_t maxMemoryGrowthBytes) override;
         Core::hresult MemoryThreshold(uint64_t& maxMemoryGrowthBytes) const override;
+        Core::hresult SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* baseline) override;
         Core::hresult Register(QualityAssurance::IBenchmark::INotification* sink) override;
         Core::hresult Unregister(QualityAssurance::IBenchmark::INotification* sink) override;
 
