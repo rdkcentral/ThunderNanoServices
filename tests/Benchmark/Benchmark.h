@@ -23,13 +23,16 @@
 #include <qa_interfaces/IBenchmark.h>
 #include <interfaces/IMemory.h>
 #include <qa_interfaces/IBenchmarkPayload.h>
+#include <atomic>
 #include <map>
 #include <vector>
 
 namespace Thunder {
 namespace Plugin {
 
-    class Benchmark : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class Benchmark : public PluginHost::IPlugin
+                    , public PluginHost::JSONRPC
+                    , public QualityAssurance::IBenchmark {
     private:
         class Notification : public RPC::IRemoteConnection::INotification {
         public:
@@ -64,30 +67,6 @@ namespace Plugin {
             Benchmark& _parent;
         };
 
-        class BenchmarkNotification : public QualityAssurance::IBenchmark::INotification {
-        public:
-            BenchmarkNotification(const BenchmarkNotification&) = delete;
-            BenchmarkNotification& operator=(const BenchmarkNotification&) = delete;
-
-            explicit BenchmarkNotification(Benchmark& parent)
-                : _parent(parent)
-            {
-            }
-            ~BenchmarkNotification() override = default;
-
-            void PerformanceCheckCompleted() override
-            {
-                _parent.BenchmarkCompleted();
-            }
-
-            BEGIN_INTERFACE_MAP(BenchmarkNotification)
-                INTERFACE_ENTRY(QualityAssurance::IBenchmark::INotification)
-            END_INTERFACE_MAP
-
-        private:
-            Benchmark& _parent;
-        };
-
     public:
         Benchmark(const Benchmark&) = delete;
         Benchmark& operator=(const Benchmark&) = delete;
@@ -100,7 +79,6 @@ namespace Plugin {
             , _memory(nullptr)
             , _service(nullptr)
             , _notification(*this)
-            , _benchmarkNotification(*this)
             , _payloadProxy(nullptr)
             , _maxLatencyDeviationPct(0)
             , _maxMemoryGrowthBytes(0)
@@ -112,27 +90,30 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(Benchmark)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_AGGREGATE(QualityAssurance::IBenchmark, _benchmark)
+            INTERFACE_ENTRY(QualityAssurance::IBenchmark)
             INTERFACE_AGGREGATE(Exchange::IMemory, _memory)
         END_INTERFACE_MAP
 
-        //   IPlugin methods
+        // IPlugin
         const string Initialize(PluginHost::IShell* service) override;
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
+        // IBenchmark
+        Core::hresult Trigger(const uint32_t iterations) override;
+        Core::hresult CollectData(QualityAssurance::IBenchmark::IBenchmarkResultIterator*& report) const override;
+        Core::hresult LatencyThreshold(const uint32_t maxLatencyDeviationPct) override;
+        Core::hresult LatencyThreshold(uint32_t& maxLatencyDeviationPct) const override;
+        Core::hresult MemoryThreshold(const uint64_t maxMemoryGrowthBytes) override;
+        Core::hresult MemoryThreshold(uint64_t& maxMemoryGrowthBytes) const override;
+        Core::hresult SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* baseline) override;
+        Core::hresult Register(QualityAssurance::IBenchmark::INotification* sink) override;
+        Core::hresult Unregister(QualityAssurance::IBenchmark::INotification* sink) override;
+
     private:
         void Deactivated(RPC::IRemoteConnection* connection);
-        void BenchmarkCompleted();
-        void RegisterJsonRpcHandlers();
-        void UnregisterJsonRpcHandlers();
         void RunPayloadBenchmarks(uint32_t iterations);
         void ApplyThresholds();
-
-        uint32_t GetLatencyThreshold(Core::JSON::DecUInt32& value) const;
-        uint32_t SetLatencyThreshold(const Core::JSON::DecUInt32& value);
-        uint32_t GetMemoryThreshold(Core::JSON::DecUInt64& value) const;
-        uint32_t SetMemoryThreshold(const Core::JSON::DecUInt64& value);
 
     private:
         QualityAssurance::IBenchmark* _benchmark;
@@ -140,13 +121,14 @@ namespace Plugin {
         Exchange::IMemory* _memory;
         PluginHost::IShell* _service;
         Core::SinkType<Notification> _notification;
-        Core::SinkType<BenchmarkNotification> _benchmarkNotification;
         QualityAssurance::IBenchmarkPayload* _payloadProxy;
         mutable Core::CriticalSection _adminLock;
         std::vector<QualityAssurance::IBenchmark::BenchmarkResult> _results;
         std::map<string, QualityAssurance::IBenchmark::BenchmarkResult> _baselines;
+        std::vector<QualityAssurance::IBenchmark::INotification*> _notifications;
         uint32_t _maxLatencyDeviationPct;
         uint64_t _maxMemoryGrowthBytes;
+        std::atomic_flag _triggerRunning = ATOMIC_FLAG_INIT;
     };
 
 } // namespace Plugin
