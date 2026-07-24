@@ -19,6 +19,7 @@
 
 #include "Module.h"
 #include <qa_interfaces/ITestAutomation.h>
+#include <mutex>
 
 namespace Thunder {
 namespace Plugin {
@@ -38,6 +39,8 @@ namespace Plugin {
             , QualityAssurance::ITestTextOptions::ITestLegacy()
             , QualityAssurance::ITestTextOptions::ITestKeep()
             , QualityAssurance::ITestTextOptions::ITestCustom()
+            , _status(QualityAssurance::ITestTextOptions::STATUS_IDLE)
+            , _notification(nullptr)
         {
         }
         ~TestTextOptionsImplementation() override = default;
@@ -58,7 +61,88 @@ namespace Plugin {
             firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }
-       
+
+        // Per-field @text — echo struct round-trip
+        Core::hresult EchoMixedFields(
+            const QualityAssurance::ITestTextOptions::MixedFieldNames& input,
+            QualityAssurance::ITestTextOptions::MixedFieldNames& output) const override
+        {
+            output = input;
+            return Core::ERROR_NONE;
+        }
+
+        // Per-enumerator @text — set/get enum
+        // Per-enumerator @text — status property
+        Core::hresult Status(const QualityAssurance::ITestTextOptions::ConnectionStatus status) override
+        {
+            _status = status;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult Status(QualityAssurance::ITestTextOptions::ConnectionStatus& status) const override
+        {
+            status = _status;
+            return Core::ERROR_NONE;
+        }
+
+        // Per-method @text override — echo
+        Core::hresult InternalMethodName(const uint32_t value, uint32_t& result) const override
+        {
+            result = value;
+            return Core::ERROR_NONE;
+        }
+
+        // @text + @alt — echo
+        Core::hresult TextAndAltMethod(const uint32_t value, uint32_t& result) const override
+        {
+            result = value;
+            return Core::ERROR_NONE;
+        }
+
+        // Event registration and trigger
+        Core::hresult Register(QualityAssurance::ITestTextOptions::INotification* notification) override
+        {
+            ASSERT(notification != nullptr);
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_notification != nullptr) {
+                return Core::ERROR_UNAVAILABLE;
+            }
+            _notification = notification;
+            _notification->AddRef();
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult Unregister(QualityAssurance::ITestTextOptions::INotification* notification) override
+        {
+            ASSERT(notification != nullptr);
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_notification != notification) {
+                return Core::ERROR_UNAVAILABLE;
+            }
+            _notification->Release();
+            _notification = nullptr;
+            return Core::ERROR_NONE;
+        }
+
+        Core::hresult TriggerEvent(const uint32_t firstTestParam, const uint32_t secondTestParam,
+            const QualityAssurance::ITestTextOptions::TestDetails& thirdTestParam,
+            const QualityAssurance::ITestTextOptions::EnumTextOptions fourthTestParam) override
+        {
+            QualityAssurance::ITestTextOptions::INotification* sink = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(_mutex);
+                sink = _notification;
+                if (sink) {
+                    sink->AddRef();
+                }
+            }
+            if (sink) {
+                sink->TestEvent(firstTestParam, secondTestParam, thirdTestParam, fourthTestParam);
+                sink->Release();
+            }
+            return Core::ERROR_NONE;
+        }
+
         // ITestLegacy methods
         Core::hresult TestLegacy(const uint32_t firstTestParam VARIABLE_IS_NOT_USED, const uint32_t secondTestParam VARIABLE_IS_NOT_USED,
         const QualityAssurance::ITestTextOptions::ITestLegacy::TestDetails& thirdTestParam VARIABLE_IS_NOT_USED, const QualityAssurance::ITestTextOptions::ITestLegacy::EnumTextOptions fourthTestParam VARIABLE_IS_NOT_USED) override {
@@ -81,6 +165,11 @@ namespace Plugin {
             firstTestParam, secondTestParam, thirdTestParam.testDetailsFirst.c_str(), thirdTestParam.testDetailsSecond.c_str(), Core::EnumerateType<QualityAssurance::ITestTextOptions::EnumTextOptions>(fourthTestParam).Data()));
             return Core::ERROR_NONE;
         }
+
+    private:
+        QualityAssurance::ITestTextOptions::ConnectionStatus _status;
+        QualityAssurance::ITestTextOptions::INotification* _notification;
+        mutable std::mutex _mutex;
     };
     
     SERVICE_REGISTRATION(TestTextOptionsImplementation, 1, 0)
