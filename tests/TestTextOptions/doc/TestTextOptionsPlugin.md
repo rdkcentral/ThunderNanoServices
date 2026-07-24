@@ -669,7 +669,9 @@ This property uses the `ConnectionStatus` enum where some enumerators have `@tex
   "jsonrpc": "2.0",
   "id": 42,
   "method": "TestTextOptions.1.status",
-  "params": "connecting"
+  "params": {
+    "value": "connecting"
+  }
 }
 ```
 
