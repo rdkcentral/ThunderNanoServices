@@ -121,6 +121,16 @@ TestTextOptions interface methods:
 | Method | Description |
 | :-------- | :-------- |
 | [testStandard](#method_testStandard) | Validates standard which is camelCase |
+| [echoMixedFields](#method_echoMixedFields) | Echoes a struct with per-field @text overrides for round-trip validation |
+| [renamedMethod](#method_renamedMethod) | Per-method @text override (C++ name: InternalMethodName) |
+| [primaryApi](#method_primaryApi) | @text combined with @alt (C++ name: TextAndAltMethod, @alt: legacyApi) |
+| [triggerEvent](#method_triggerEvent) | Triggers the testEvent notification |
+
+TestTextOptions interface properties:
+
+| Property | Description |
+| :-------- | :-------- |
+| [status](#property_status) | Connection status with per-enumerator @text overrides |
 
 TestTextOptions TestLegacy interface methods:
 
@@ -202,7 +212,7 @@ Checks if a JSON-RPC method or property exists.
 
 ### Description
 
-This method will return *True* for the following methods/properties: *versions, exists, register, unregister, allocatememory, freeallocatedmemory, testbigstring, testStandard, testlegacy, TestKeeP, TESTCUSTOM, crash*.
+This method will return *True* for the following methods/properties: *versions, exists, register, unregister, allocatememory, freeallocatedmemory, testbigstring, testStandard, echoMixedFields, status, renamedMethod, primaryApi, legacyApi, triggerEvent, testlegacy, TestKeeP, TESTCUSTOM, crash*.
 
 ### Parameters
 
@@ -539,6 +549,279 @@ Validates standard which is camelCase.
       "testDetailsSecond": "..."
     },
     "fourthTestParam": "SECOND_OPTION"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_echoMixedFields"></a>
+## *echoMixedFields [<sup>method</sup>](#head_Methods)*
+
+Echoes a struct with per-field @text overrides for round-trip validation.
+
+### Description
+
+This method accepts a `MixedFieldNames` struct where some fields have `@text` overrides (`DeviceName` → `device_id`, `FirmwareVer` → `fw_version`) while `IsOnline` follows the standard camelCase convention (`isOnline`). The struct is echoed back unchanged, allowing validation that per-field @text renaming works correctly.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.device_id | string | mandatory | Device name (C++ field: `DeviceName`, overridden via `@text device_id`) |
+| params.fw_version | integer | mandatory | Firmware version (C++ field: `FirmwareVer`, overridden via `@text fw_version`) |
+| params.isOnline | boolean | mandatory | Online status (no @text override, follows camelCase) |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | object | mandatory | Echoed struct |
+| result.device_id | string | mandatory | Device name |
+| result.fw_version | integer | mandatory | Firmware version |
+| result.isOnline | boolean | mandatory | Online status |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.echoMixedFields",
+  "params": {
+    "device_id": "myDevice",
+    "fw_version": 42,
+    "isOnline": true
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": {
+    "device_id": "myDevice",
+    "fw_version": 42,
+    "isOnline": true
+  }
+}
+```
+
+<a id="property_status"></a>
+## *status [<sup>property</sup>](#head_Methods)*
+
+Connection status with per-enumerator @text overrides.
+
+### Description
+
+This property uses the `ConnectionStatus` enum where some enumerators have `@text` overrides:
+- `STATUS_IDLE` → `"STATUS_IDLE"` (no override, follows standard convention)
+- `STATUS_CONNECTING` → `"connecting"` (overridden via `@text connecting`)
+- `STATUS_ACTIVE` → `"STATUS_ACTIVE"` (no override)
+- `STATUS_AUTH_FAILED` → `"auth-error"` (overridden via `@text auth-error`)
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | string | mandatory | Connection status (must be one of: *STATUS_IDLE, connecting, STATUS_ACTIVE, auth-error*) |
+
+### Example
+
+#### Get Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.status"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": "STATUS_IDLE"
+}
+```
+
+#### Set Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.status",
+  "params": "connecting"
+}
+```
+
+#### Set Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_renamedMethod"></a>
+## *renamedMethod [<sup>method</sup>](#head_Methods)*
+
+Per-method @text override. The C++ method name is `InternalMethodName`, but via `@text renamedMethod` it is exposed as `renamedMethod` in JSON-RPC. The original C++ name is NOT callable.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.value | integer | mandatory | Input value to echo |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Echoed value |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.renamedMethod",
+  "params": {
+    "value": 123
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 123
+}
+```
+
+<a id="method_primaryApi"></a>
+## *primaryApi [<sup>method</sup>](#head_Methods)*
+
+@text combined with @alt. The C++ method name is `TextAndAltMethod`. Via `@text primaryApi` and `@alt legacyApi`, it is callable as either `primaryApi` (primary name) or `legacyApi` (alternative name). The original C++ name is NOT callable.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.value | integer | mandatory | Input value to echo |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | integer | mandatory | Echoed value |
+
+### Example
+
+#### Request (primary name)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.primaryApi",
+  "params": {
+    "value": 456
+  }
+}
+```
+
+#### Request (alternative name via @alt)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.legacyApi",
+  "params": {
+    "value": 456
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": 456
+}
+```
+
+<a id="method_triggerEvent"></a>
+## *triggerEvent [<sup>method</sup>](#head_Methods)*
+
+Triggers the testEvent notification to all registered observers.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.firstTestParam | integer | mandatory | *...* |
+| params.secondTestParam | integer | mandatory | *...* |
+| params.thirdTestParam | object | mandatory | *...* |
+| params.thirdTestParam.testDetailsFirst | string | mandatory | *...* |
+| params.thirdTestParam.testDetailsSecond | string | mandatory | *...* |
+| params.fourthTestParam | string | mandatory | *...* (must be one of the following: *FIRST_OPTION, SECOND_OPTION, THIRD_OPTION*) |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "TestTextOptions.1.triggerEvent",
+  "params": {
+    "firstTestParam": 1,
+    "secondTestParam": 2,
+    "thirdTestParam": {
+      "testDetailsFirst": "hello",
+      "testDetailsSecond": "world"
+    },
+    "fourthTestParam": "FIRST_OPTION"
   }
 }
 ```
