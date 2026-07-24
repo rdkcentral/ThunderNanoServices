@@ -72,13 +72,14 @@ namespace Plugin {
         }
 
         // Per-enumerator @text — set/get enum
-        Core::hresult SetStatus(const QualityAssurance::ITestTextOptions::ConnectionStatus status) override
+        // Per-enumerator @text — status property
+        Core::hresult Status(const QualityAssurance::ITestTextOptions::ConnectionStatus status) override
         {
             _status = status;
             return Core::ERROR_NONE;
         }
 
-        Core::hresult GetStatus(QualityAssurance::ITestTextOptions::ConnectionStatus& status) const override
+        Core::hresult Status(QualityAssurance::ITestTextOptions::ConnectionStatus& status) const override
         {
             status = _status;
             return Core::ERROR_NONE;
