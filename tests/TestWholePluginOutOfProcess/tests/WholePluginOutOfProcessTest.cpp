@@ -40,7 +40,7 @@ namespace Tests {
             plugin.Callsign = Callsign;
             plugin.ClassName = ClassName;
             plugin.Locator = Locator;
-            plugin.StartMode = PluginHost::IShell::startmode::ACTIVATED;
+            plugin.StartMode = Thunder::Plugin::Configuration::startmode::ACTIVATED;
 
             if (wholePluginOutOfProcess == true) {
                 plugin.Root.Mode = Plugin::Config::RootConfig::ModeType::LOCAL;
