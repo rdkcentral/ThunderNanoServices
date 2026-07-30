@@ -43,7 +43,14 @@ namespace Plugin {
             , _notification(nullptr)
         {
         }
-        ~TestTextOptionsImplementation() override = default;
+        ~TestTextOptionsImplementation() override
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            if (_notification != nullptr) {
+                _notification->Release();
+                _notification = nullptr;
+            }
+        }
         
     public:
         
@@ -71,16 +78,17 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-        // Per-enumerator @text — set/get enum
         // Per-enumerator @text — status property
         Core::hresult Status(const QualityAssurance::ITestTextOptions::ConnectionStatus status) override
         {
+            std::lock_guard<std::mutex> lock(_mutex);
             _status = status;
             return Core::ERROR_NONE;
         }
 
         Core::hresult Status(QualityAssurance::ITestTextOptions::ConnectionStatus& status) const override
         {
+            std::lock_guard<std::mutex> lock(_mutex);
             status = _status;
             return Core::ERROR_NONE;
         }
