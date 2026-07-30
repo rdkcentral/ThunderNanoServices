@@ -20,6 +20,7 @@ project(NanoServices)
 
 option(PLUGIN_AVS "Include AVS plugin" OFF)
 option(PLUGIN_BACKOFFICE "Include BackOffice plugin" OFF)
+option(PLUGIN_ES1BENCHMARK "Include ES1Benchmark plugin" OFF)
 option(PLUGIN_BLUETOOTH "Include Bluetooth plugin" OFF)
 option(PLUGIN_BLUETOOTHREMOTECONTROL "Include Bluetooth Remote Control plugin" OFF)
 option(PLUGIN_BLUETOOTHAUDIOSINK "Include Bluetooth Audio Sink plugin" OFF)
@@ -72,6 +73,10 @@ endif()
 
 if(PLUGIN_BACKOFFICE)
     add_subdirectory(BackOffice)
+endif()
+
+if(PLUGIN_ES1BENCHMARK)
+    add_subdirectory(ES1Benchmark)
 endif()
 
 if(PLUGIN_BLUETOOTH)
