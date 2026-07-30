@@ -30,10 +30,13 @@ average latency, standard deviation, and round-trip time.
 ## 3. Plugin Overview
 
 **Name:** `ES1Benchmark`  
-**Namespace:** `Thunder::Plugin`  
-**Interface namespace:** `Thunder::Exchange`  
-**Activation mode:** `Activated` (out-of-process), so real COM-RPC + JSON-RPC
-serialisation overhead is measured end-to-end.
+**Namespace:** `WPEFramework::Plugin`  
+**Activation mode:** `Local` (in-process) — used for the initial porting and
+box-verification phase.  All measured time is pure JSON-RPC
+serialise → dispatch → deserialise cost with no COM-RPC hop.
+
+> **Phase 2 note:** Once the plugin is confirmed working on the box, activation
+> mode can be switched to `Activated` (OOP) to include the COM-RPC IPC cost.
 
 ### 3.1 Repository placement
 
@@ -43,70 +46,51 @@ ThunderNanoServices/
     ├── CMakeLists.txt
     ├── Module.h
     ├── Module.cpp
-    ├── ES1Benchmark.h          # plugin shell (IPlugin + JSONRPC)
-    ├── ES1Benchmark.cpp
-    ├── ES1BenchmarkImpl.cpp    # out-of-process implementation
-    └── ES1Benchmark.conf.in
-
-ThunderInterfaces/
-└── interfaces/
-    └── IES1Benchmark.h         # COM-RPC interface
+    ├── ES1BenchmarkData.h      # shared JSON wire types (plugin + client)
+    ├── ES1Benchmark.h          # plugin class (IPlugin + JSONRPC)
+    ├── ES1Benchmark.cpp        # echo handler implementations
+    ├── ES1Benchmark.conf.in
+    └── client/
+        ├── CMakeLists.txt
+        ├── Module.h
+        ├── Module.cpp
+        └── ES1BenchmarkClient.cpp  # standalone C++ measurement client
 ```
+
+No COM-RPC interface header is required for Local mode — the plugin
+registers JSON-RPC handlers directly using `PluginHost::JSONRPC::Register<>()`.
 
 ---
 
-## 4. Interface Definition (`IES1Benchmark.h`)
+## 4. Shared JSON Wire Types (`ES1BenchmarkData.h`)
+
+No COM-RPC interface is used in Local mode.  Instead, `ES1BenchmarkData.h`
+defines `Core::JSON::Container` subclasses that are shared between the plugin
+(server) and `ES1BenchmarkClient` (client) — both sides use the same types
+for serialisation without linking one against the other.
 
 ```cpp
-namespace Thunder {
-namespace Exchange {
+namespace WPEFramework {
+namespace JsonData {
+namespace ES1Benchmark {
 
-    struct EXTERNAL IES1Benchmark : virtual public Core::IUnknown {
-        enum { ID = ID_ES1BENCHMARK };
+    // echostring params:  { "size": <uint32>, "value": "<string>" }
+    // echostring result:  { "echo":  "<string>" }
+    struct StringEchoParams : public Core::JSON::Container { ... };
+    struct StringEchoResult : public Core::JSON::Container { ... };
 
-        ~IES1Benchmark() override = default;
+    // echoarray params:   { "count": <uint32>, "values": [<uint32>,...] }
+    // echoarray result:   { "echo":  [<uint32>,...] }
+    struct ArrayEchoParams  : public Core::JSON::Container { ... };
+    struct ArrayEchoResult  : public Core::JSON::Container { ... };
 
-        // -----------------------------------------------------------------
-        // String echo — measures JSON string serialisation round-trip.
-        // The server reflects the input string unchanged.
-        // @param size: length of the string to echo (caller-generated)
-        // @param value: the string payload
-        // @param echo: the reflected string
-        // -----------------------------------------------------------------
-        virtual uint32_t EchoString(
-            const uint32_t size,
-            const string& value,
-            string& echo /* @out */) = 0;
+    // Scalar methods use Core::JSON::DecUInt32 / DecUInt64 / Boolean /
+    // Float / Double directly — no wrapper needed.
 
-        // -----------------------------------------------------------------
-        // Array (vector<uint32_t>) echo — measures array serialisation.
-        // The server reflects the input vector unchanged.
-        // @param count: number of elements
-        // @param values: the array payload (@restrict:1..4096)
-        // @param echo: the reflected array
-        // -----------------------------------------------------------------
-        virtual uint32_t EchoArray(
-            const uint32_t count,
-            const std::vector<uint32_t>& values /* @restrict:1..4096 */,
-            std::vector<uint32_t>& echo /* @out @restrict:1..4096 */) = 0;
-
-        // -----------------------------------------------------------------
-        // Scalar echo — measures individual primitive type round-trips.
-        // One method per scalar type so that each can be timed separately.
-        // -----------------------------------------------------------------
-        virtual uint32_t EchoUint32(const uint32_t value, uint32_t& echo /* @out */) = 0;
-        virtual uint32_t EchoUint64(const uint64_t value, uint64_t& echo /* @out */) = 0;
-        virtual uint32_t EchoBool  (const bool    value, bool&     echo /* @out */) = 0;
-        virtual uint32_t EchoFloat (const float   value, float&    echo /* @out */) = 0;
-        virtual uint32_t EchoDouble(const double  value, double&   echo /* @out */) = 0;
-    };
-
-} // namespace Exchange
-} // namespace Thunder
+} // namespace ES1Benchmark
+} // namespace JsonData
+} // namespace WPEFramework
 ```
-
-A corresponding `ID_ES1BENCHMARK` entry is added to
-`ThunderInterfaces/interfaces/Ids.h`.
 
 ---
 
@@ -125,7 +109,7 @@ All methods are registered by the plugin shell.  The client calls them over the
 | `echoint64`    | Scalar         | `value` |
 | `echobool`     | Scalar         | `value` |
 | `echofloat`    | Scalar         | `value` |
-| `echodbuble`   | Scalar         | `value` |
+| `echodouble`   | Scalar         | `value` |
 
 ### 5.2 Example: `echostring` request / response
 
@@ -182,13 +166,18 @@ All methods are registered by the plugin shell.  The client calls them over the
 ### 6.1 Plugin configuration (`ES1Benchmark.conf.in`)
 
 ```
-startmode = "Activated"
-resumed   = "true"
+autostart = "@PLUGIN_ES1BENCHMARK_AUTOSTART@"
+```
 
-configuration = JSON()
-root = JSON()
-root.add("mode", "@PLUGIN_ES1BENCHMARK_MODE@")
-configuration.add("root", root)
+The `write_config()` CMake macro generates the final `ES1Benchmark.json`
+installed to `/etc/WPEFramework/plugins/`:
+
+```json
+{
+  "locator": "libWPEFrameworkES1Benchmark.so",
+  "classname": "ES1Benchmark",
+  "autostart": true
+}
 ```
 
 ### 6.2 Client-side run parameters
@@ -207,8 +196,9 @@ They are passed as command-line arguments or environment variables:
 Example:
 
 ```bash
-python3 es1_benchmark.py \
+ES1BenchmarkClient \
   --host 192.168.1.10 \
+  --port 9998 \
   --iterations 200 \
   --string-sizes 64,512,2048,20480 \
   --array-counts 10,128,512,1024
@@ -333,8 +323,9 @@ echoint32    | scalar |   n/a  | oneshot_curl      |    295 |        17 |    295
 
 - GTest / CTest annotations on the device side.
 - Pass/fail thresholds (this plugin only measures — it does not assert).
-- In-process (`Local`) mode performance numbers.
+- COM-RPC proxy/stub generation (not needed for Local mode).
 - Any dependency on the existing `Benchmark` plugin or `IBenchmark` / `IBenchmarkPayload` interfaces.
+- `Activated` (OOP) mode — deferred to Phase 2 once Local mode is verified on the box.
 
 ---
 
@@ -342,9 +333,11 @@ echoint32    | scalar |   n/a  | oneshot_curl      |    295 |        17 |    295
 
 | Deliverable | Location |
 |-------------|----------|
-| `IES1Benchmark.h` — COM-RPC interface | `ThunderInterfaces/interfaces/` |
-| `ID_ES1BENCHMARK` ID entry | `ThunderInterfaces/interfaces/Ids.h` |
-| `ES1Benchmark` plugin (shell + OOP impl) | `ThunderNanoServices/ES1Benchmark/` |
+| `ES1BenchmarkData.h` — shared JSON wire types | `ThunderNanoServices/ES1Benchmark/` |
+| `ES1Benchmark.h` / `ES1Benchmark.cpp` — plugin | `ThunderNanoServices/ES1Benchmark/` |
+| `ES1Benchmark.conf.in` — plugin config template | `ThunderNanoServices/ES1Benchmark/` |
 | `PLUGIN_ES1BENCHMARK` CMake option | `ThunderNanoServices/CMakeLists.txt` |
-| `es1_benchmark.py` — external client | `ThunderNanoServices/ES1Benchmark/` |
+| `ES1BenchmarkClient` — standalone C++ client | `ThunderNanoServices/ES1Benchmark/client/` |
+| `PLUGIN_ES1BENCHMARK_CLIENT` CMake option | `ThunderNanoServices/ES1Benchmark/CMakeLists.txt` |
+| `wpeframework-es1benchmark_git.bb` — BitBake recipe | `meta-rdk-video/recipes-extended/wpeframework-es1benchmark/` |
 | `results.json` schema | defined in §9 above |
