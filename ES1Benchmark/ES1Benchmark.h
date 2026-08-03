@@ -21,6 +21,7 @@
 
 #include "Module.h"
 #include <interfaces/IES1Benchmark.h>
+#include <interfaces/json/JES1Benchmark.h>
 #include <interfaces/json/JsonData_ES1Benchmark.h>
 
 namespace WPEFramework {

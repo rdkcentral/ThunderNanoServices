@@ -64,14 +64,15 @@ namespace Plugin {
         std::vector<uint32_t> output;
 
         if (values != nullptr) {
-            values->Reset();
-            while (values->Next() == true) {
-                output.push_back(values->Current());
+            uint32_t val;
+            values->Reset(0);
+            while (values->Next(val) == true) {
+                output.push_back(val);
             }
         }
 
-        using IteratorImpl = RPC::IteratorType<Exchange::IES1Benchmark::IUInt32Iterator, std::vector<uint32_t>>;
-        echo = Core::ServiceType<IteratorImpl>::Create<Exchange::IES1Benchmark::IUInt32Iterator>(std::move(output));
+        using IteratorImpl = RPC::IteratorType<Exchange::IES1Benchmark::IUInt32Iterator>;
+        echo = Core::ServiceType<IteratorImpl>::Create<Exchange::IES1Benchmark::IUInt32Iterator>(output);
 
         return (echo != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
     }
