@@ -20,41 +20,26 @@
 #pragma once
 
 #include "Module.h"
-#include "ES1BenchmarkData.h"
+#include <interfaces/IES1Benchmark.h>
+#include <interfaces/json/JsonData_ES1Benchmark.h>
 
 namespace WPEFramework {
 namespace Plugin {
 
-    // -----------------------------------------------------------------------
-    // ES1Benchmark — in-process (Local mode) echo plugin for JSON-RPC
-    // round-trip benchmarking.
-    //
-    // Exposes echo endpoints for three parameter-type classes:
-    //   String  : echostring
-    //   Array   : echoarray
-    //   Scalar  : echoint32, echoint64, echobool, echofloat, echodouble
-    //
-    // Each method receives a value and reflects it unchanged so the client
-    // can measure the full JSON-RPC serialise → dispatch → deserialise cost.
-    // -----------------------------------------------------------------------
-    class ES1Benchmark : public PluginHost::IPlugin, public PluginHost::JSONRPC {
+    class ES1Benchmark : public PluginHost::IPlugin
+                       , public PluginHost::JSONRPC
+                       , public Exchange::IES1Benchmark {
     public:
         ES1Benchmark(const ES1Benchmark&) = delete;
         ES1Benchmark& operator=(const ES1Benchmark&) = delete;
 
-        ES1Benchmark()
-        {
-            RegisterAll();
-        }
-
-        ~ES1Benchmark() override
-        {
-            UnregisterAll();
-        }
+        ES1Benchmark() = default;
+        ~ES1Benchmark() override = default;
 
         BEGIN_INTERFACE_MAP(ES1Benchmark)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_ENTRY(Exchange::IES1Benchmark)
         END_INTERFACE_MAP
 
         // IPlugin
@@ -62,27 +47,14 @@ namespace Plugin {
         void Deinitialize(PluginHost::IShell* service) override;
         string Information() const override;
 
-    private:
-        // JSON-RPC registration
-        void RegisterAll();
-        void UnregisterAll();
-
-        // ---- string ----
-        uint32_t endpoint_echostring(
-            const JsonData::ES1Benchmark::StringEchoParams& params,
-            JsonData::ES1Benchmark::StringEchoResult& response);
-
-        // ---- array ----
-        uint32_t endpoint_echoarray(
-            const JsonData::ES1Benchmark::ArrayEchoParams& params,
-            JsonData::ES1Benchmark::ArrayEchoResult& response);
-
-        // ---- scalars ----
-        uint32_t endpoint_echoint32 (const Core::JSON::DecUInt32& params, Core::JSON::DecUInt32& response);
-        uint32_t endpoint_echoint64 (const Core::JSON::DecUInt64& params, Core::JSON::DecUInt64& response);
-        uint32_t endpoint_echobool  (const Core::JSON::Boolean&   params, Core::JSON::Boolean&   response);
-        uint32_t endpoint_echofloat (const Core::JSON::Float&     params, Core::JSON::Float&     response);
-        uint32_t endpoint_echodouble(const Core::JSON::Double&    params, Core::JSON::Double&    response);
+        // IES1Benchmark
+        uint32_t EchoString(const string& value, string& echo) override;
+        uint32_t EchoArray(IUInt32Iterator* const values, IUInt32Iterator*& echo) override;
+        uint32_t EchoUint32(const uint32_t value, uint32_t& echo) override;
+        uint32_t EchoUint64(const uint64_t value, uint64_t& echo) override;
+        uint32_t EchoBool(const bool value, bool& echo) override;
+        uint32_t EchoFloat(const float value, float& echo) override;
+        uint32_t EchoDouble(const double value, double& echo) override;
     };
 
 } // namespace Plugin

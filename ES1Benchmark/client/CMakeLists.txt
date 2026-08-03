@@ -31,11 +31,6 @@ set_target_properties(ES1BenchmarkClient
         CXX_STANDARD_REQUIRED YES
 )
 
-target_include_directories(ES1BenchmarkClient
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/..   # so ES1BenchmarkData.h is found
-)
-
 target_link_libraries(ES1BenchmarkClient
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
