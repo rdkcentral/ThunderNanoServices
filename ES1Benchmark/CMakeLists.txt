@@ -31,6 +31,7 @@ set(PLUGIN_ES1BENCHMARK_AUTOSTART "true" CACHE STRING "Automatically start ES1Be
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 if(BUILD_REFERENCE)
     add_definitions(-DBUILD_REFERENCE=${BUILD_REFERENCE})
@@ -48,6 +49,7 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
+    ${NAMESPACE}Definitions::${NAMESPACE}Definitions
 )
 
 set_target_properties(${MODULE_NAME}

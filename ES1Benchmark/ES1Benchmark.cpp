@@ -19,6 +19,8 @@
 
 #include "ES1Benchmark.h"
 
+#include <vector>
+
 namespace WPEFramework {
 namespace Plugin {
 
@@ -35,18 +37,15 @@ namespace Plugin {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // IPlugin
-    // -----------------------------------------------------------------------
-
     const string ES1Benchmark::Initialize(PluginHost::IShell* /* service */)
     {
-        // Nothing to initialise for a pure echo plugin.
+        Exchange::JES1Benchmark::Register(*this, this);
         return string();
     }
 
     void ES1Benchmark::Deinitialize(PluginHost::IShell* /* service */)
     {
+        Exchange::JES1Benchmark::Unregister(*this);
     }
 
     string ES1Benchmark::Information() const
@@ -54,119 +53,56 @@ namespace Plugin {
         return string("ES1 JSON-RPC round-trip benchmark echo plugin");
     }
 
-    // -----------------------------------------------------------------------
-    // JSON-RPC registration
-    // -----------------------------------------------------------------------
-
-    void ES1Benchmark::RegisterAll()
+    uint32_t ES1Benchmark::EchoString(const string& value, string& echo)
     {
-        using namespace JsonData::ES1Benchmark;
-
-        Register<StringEchoParams, StringEchoResult>(
-            _T("echostring"),  &ES1Benchmark::endpoint_echostring,  this);
-
-        Register<ArrayEchoParams, ArrayEchoResult>(
-            _T("echoarray"),   &ES1Benchmark::endpoint_echoarray,   this);
-
-        Register<Core::JSON::DecUInt32, Core::JSON::DecUInt32>(
-            _T("echoint32"),   &ES1Benchmark::endpoint_echoint32,   this);
-
-        Register<Core::JSON::DecUInt64, Core::JSON::DecUInt64>(
-            _T("echoint64"),   &ES1Benchmark::endpoint_echoint64,   this);
-
-        Register<Core::JSON::Boolean, Core::JSON::Boolean>(
-            _T("echobool"),    &ES1Benchmark::endpoint_echobool,    this);
-
-        Register<Core::JSON::Float, Core::JSON::Float>(
-            _T("echofloat"),   &ES1Benchmark::endpoint_echofloat,   this);
-
-        Register<Core::JSON::Double, Core::JSON::Double>(
-            _T("echodouble"),  &ES1Benchmark::endpoint_echodouble,  this);
-    }
-
-    void ES1Benchmark::UnregisterAll()
-    {
-        Unregister(_T("echostring"));
-        Unregister(_T("echoarray"));
-        Unregister(_T("echoint32"));
-        Unregister(_T("echoint64"));
-        Unregister(_T("echobool"));
-        Unregister(_T("echofloat"));
-        Unregister(_T("echodouble"));
-    }
-
-    // -----------------------------------------------------------------------
-    // String echo
-    // Method: echostring
-    // Params: { "size": <uint32>, "value": "<string>" }
-    // Result: { "echo":  "<string>" }
-    // -----------------------------------------------------------------------
-    uint32_t ES1Benchmark::endpoint_echostring(
-        const JsonData::ES1Benchmark::StringEchoParams& params,
-        JsonData::ES1Benchmark::StringEchoResult& response)
-    {
-        response.Echo = params.Value.Value();
+        echo = value;
         return Core::ERROR_NONE;
     }
 
-    // -----------------------------------------------------------------------
-    // Array echo
-    // Method: echoarray
-    // Params: { "count": <uint32>, "values": [<uint32>, ...] }
-    // Result: { "echo":  [<uint32>, ...] }
-    // -----------------------------------------------------------------------
-    uint32_t ES1Benchmark::endpoint_echoarray(
-        const JsonData::ES1Benchmark::ArrayEchoParams& params,
-        JsonData::ES1Benchmark::ArrayEchoResult& response)
+    uint32_t ES1Benchmark::EchoArray(IUInt32Iterator* const values, IUInt32Iterator*& echo)
     {
-        auto iter = params.Values.Elements();
-        while (iter.Next()) {
-            response.Echo.Add() = iter.Current().Value();
+        std::vector<uint32_t> output;
+
+        if (values != nullptr) {
+            values->Reset();
+            while (values->Next() == true) {
+                output.push_back(values->Current());
+            }
         }
+
+        using IteratorImpl = RPC::IteratorType<Exchange::IES1Benchmark::IUInt32Iterator, std::vector<uint32_t>>;
+        echo = Core::ServiceType<IteratorImpl>::Create<Exchange::IES1Benchmark::IUInt32Iterator>(std::move(output));
+
+        return (echo != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+    }
+
+    uint32_t ES1Benchmark::EchoUint32(const uint32_t value, uint32_t& echo)
+    {
+        echo = value;
         return Core::ERROR_NONE;
     }
 
-    // -----------------------------------------------------------------------
-    // Scalar echoes
-    // -----------------------------------------------------------------------
-
-    // Method: echoint32  — params/result: <uint32>
-    uint32_t ES1Benchmark::endpoint_echoint32(
-        const Core::JSON::DecUInt32& params, Core::JSON::DecUInt32& response)
+    uint32_t ES1Benchmark::EchoUint64(const uint64_t value, uint64_t& echo)
     {
-        response = params.Value();
+        echo = value;
         return Core::ERROR_NONE;
     }
 
-    // Method: echoint64  — params/result: <uint64>
-    uint32_t ES1Benchmark::endpoint_echoint64(
-        const Core::JSON::DecUInt64& params, Core::JSON::DecUInt64& response)
+    uint32_t ES1Benchmark::EchoBool(const bool value, bool& echo)
     {
-        response = params.Value();
+        echo = value;
         return Core::ERROR_NONE;
     }
 
-    // Method: echobool   — params/result: <bool>
-    uint32_t ES1Benchmark::endpoint_echobool(
-        const Core::JSON::Boolean& params, Core::JSON::Boolean& response)
+    uint32_t ES1Benchmark::EchoFloat(const float value, float& echo)
     {
-        response = params.Value();
+        echo = value;
         return Core::ERROR_NONE;
     }
 
-    // Method: echofloat  — params/result: <float>
-    uint32_t ES1Benchmark::endpoint_echofloat(
-        const Core::JSON::Float& params, Core::JSON::Float& response)
+    uint32_t ES1Benchmark::EchoDouble(const double value, double& echo)
     {
-        response = params.Value();
-        return Core::ERROR_NONE;
-    }
-
-    // Method: echodouble — params/result: <double>
-    uint32_t ES1Benchmark::endpoint_echodouble(
-        const Core::JSON::Double& params, Core::JSON::Double& response)
-    {
-        response = params.Value();
+        echo = value;
         return Core::ERROR_NONE;
     }
 

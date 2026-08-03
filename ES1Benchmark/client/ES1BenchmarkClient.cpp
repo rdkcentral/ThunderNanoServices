@@ -36,7 +36,6 @@
 // ---------------------------------------------------------------------------
 
 #include "Module.h"
-#include "../ES1BenchmarkData.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -175,19 +174,16 @@ static void BenchString(JSONRPC::LinkType<Core::JSON::IElement>& persistent,
                         uint32_t strSize,
                         uint32_t iterations)
 {
-    using namespace JsonData::ES1Benchmark;
-
     // Build a string payload of the requested size.
-    StringEchoParams params;
-    params.Size  = strSize;
-    params.Value = string(strSize, 'x');
+    Core::JSON::String params;
+    params = string(strSize, 'x');
 
     char label[64];
     snprintf(label, sizeof(label), "echostring (size=%u)", strSize);
 
-    PrintRow(label, "persistent_ws", RunPersistent<StringEchoParams, StringEchoResult>(
+    PrintRow(label, "persistent_ws", RunPersistent<Core::JSON::String, Core::JSON::String>(
         persistent, "echostring", params, iterations));
-    PrintRow(label, "oneshot",       RunOneShot<StringEchoParams, StringEchoResult>(
+    PrintRow(label, "oneshot",       RunOneShot<Core::JSON::String, Core::JSON::String>(
         "echostring", params, iterations));
 }
 
@@ -195,20 +191,17 @@ static void BenchArray(JSONRPC::LinkType<Core::JSON::IElement>& persistent,
                        uint32_t count,
                        uint32_t iterations)
 {
-    using namespace JsonData::ES1Benchmark;
-
-    ArrayEchoParams params;
-    params.Count = count;
+    Core::JSON::ArrayType<Core::JSON::DecUInt32> params;
     for (uint32_t i = 0; i < count; i++) {
-        params.Values.Add() = i;
+        params.Add() = i;
     }
 
     char label[64];
     snprintf(label, sizeof(label), "echoarray  (count=%u)", count);
 
-    PrintRow(label, "persistent_ws", RunPersistent<ArrayEchoParams, ArrayEchoResult>(
+    PrintRow(label, "persistent_ws", RunPersistent<Core::JSON::ArrayType<Core::JSON::DecUInt32>, Core::JSON::ArrayType<Core::JSON::DecUInt32>>(
         persistent, "echoarray", params, iterations));
-    PrintRow(label, "oneshot",       RunOneShot<ArrayEchoParams, ArrayEchoResult>(
+    PrintRow(label, "oneshot",       RunOneShot<Core::JSON::ArrayType<Core::JSON::DecUInt32>, Core::JSON::ArrayType<Core::JSON::DecUInt32>>(
         "echoarray", params, iterations));
 }
 
