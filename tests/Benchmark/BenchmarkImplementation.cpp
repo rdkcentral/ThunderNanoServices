@@ -86,7 +86,7 @@ namespace Plugin {
         Core::hresult SetBaseline(IBenchmarkResultIterator* /* baseline */) override
         {
             // Baseline management is handled on the plugin shell side.
-            return Core::ERROR_NONE;
+            return Core::ERROR_NOT_SUPPORTED;
         }
 
         Core::hresult Register(IBenchmark::INotification* sink) override

@@ -430,9 +430,6 @@ namespace Plugin {
             return Core::ERROR_INPROGRESS;
         }
         TriggerGuard guard(_triggerRunning);
-        _adminLock.Lock();
-        _results.clear();
-        _adminLock.Unlock();
 
         RunPayloadBenchmarks(iterations);
         ApplyThresholds();
@@ -547,10 +544,9 @@ namespace Plugin {
     {
         ASSERT(_payloadProxy != nullptr);
 
-        auto addResult = [this](QualityAssurance::IBenchmark::BenchmarkResult&& r) {
-            _adminLock.Lock();
-            _results.push_back(std::move(r));
-            _adminLock.Unlock();
+        std::vector<QualityAssurance::IBenchmark::BenchmarkResult> localResults;
+        auto addResult = [&localResults](QualityAssurance::IBenchmark::BenchmarkResult&& r) {
+            localResults.push_back(std::move(r));
         };
 
         addResult(MeasurePayloadMethod("SendUint32", iterations, _memory, [this]() -> uint32_t {
@@ -620,6 +616,10 @@ namespace Plugin {
             uint32_t result = 0;
             return _payloadProxy->Add(17, 25, result);
         }));
+
+        _adminLock.Lock();
+        _results = std::move(localResults);
+        _adminLock.Unlock();
     }
 
     void Benchmark::ApplyThresholds()
