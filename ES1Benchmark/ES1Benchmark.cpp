@@ -18,6 +18,7 @@
  */
 
 #include "ES1Benchmark.h"
+#include <chrono>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -33,6 +34,13 @@ namespace Plugin {
             // Controls
             {}
         );
+
+        // Helper function to get Unix epoch time in microseconds
+        inline uint64_t GetUnixMicroseconds() {
+            return std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::system_clock::now().time_since_epoch()
+            ).count();
+        }
     }
 
     const string ES1Benchmark::Initialize(PluginHost::IShell* /* service */)
@@ -53,67 +61,67 @@ namespace Plugin {
 
     uint32_t ES1Benchmark::EchoString(const string& value, string& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        // TS2: Timestamp at API entry (after deserialization)
-        ts2 = Core::Time::Now().Ticks();
+        // TS2: Unix epoch timestamp at API entry (after deserialization)
+        ts2 = GetUnixMicroseconds();
         
         echo = value;
         
-        // TS3: Timestamp before return (before serialization)
-        ts3 = Core::Time::Now().Ticks();
+        // TS3: Unix epoch timestamp before return (before serialization)
+        ts3 = GetUnixMicroseconds();
         
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoArray(const std::vector<uint8_t>& values, std::vector<uint8_t>& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        // TS2: Timestamp at API entry (after deserialization)
-        ts2 = Core::Time::Now().Ticks();
+        // TS2: Unix epoch timestamp at API entry (after deserialization)
+        ts2 = GetUnixMicroseconds();
         
         echo = values;
         
-        // TS3: Timestamp before return (before serialization)
-        ts3 = Core::Time::Now().Ticks();
+        // TS3: Unix epoch timestamp before return (before serialization)
+        ts3 = GetUnixMicroseconds();
         
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoUint32(const uint32_t value, uint32_t& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        ts2 = Core::Time::Now().Ticks();
+        ts2 = GetUnixMicroseconds();
         echo = value;
-        ts3 = Core::Time::Now().Ticks();
+        ts3 = GetUnixMicroseconds();
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoUint64(const uint64_t value, uint64_t& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        ts2 = Core::Time::Now().Ticks();
+        ts2 = GetUnixMicroseconds();
         echo = value;
-        ts3 = Core::Time::Now().Ticks();
+        ts3 = GetUnixMicroseconds();
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoBool(const bool value, bool& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        ts2 = Core::Time::Now().Ticks();
+        ts2 = GetUnixMicroseconds();
         echo = value;
-        ts3 = Core::Time::Now().Ticks();
+        ts3 = GetUnixMicroseconds();
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoFloat(const float value, float& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        ts2 = Core::Time::Now().Ticks();
+        ts2 = GetUnixMicroseconds();
         echo = value;
-        ts3 = Core::Time::Now().Ticks();
+        ts3 = GetUnixMicroseconds();
         return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoDouble(const double value, double& echo, uint64_t& ts2, uint64_t& ts3)
     {
-        ts2 = Core::Time::Now().Ticks();
+        ts2 = GetUnixMicroseconds();
         echo = value;
-        ts3 = Core::Time::Now().Ticks();
+        ts3 = GetUnixMicroseconds();
         return Core::ERROR_NONE;
     }
 
