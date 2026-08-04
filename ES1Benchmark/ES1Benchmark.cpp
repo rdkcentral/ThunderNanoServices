@@ -57,7 +57,7 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoArray(const std::vector<uint32_t>& values, std::vector<uint32_t>& echo)
+    uint32_t ES1Benchmark::EchoArray(const std::vector<uint8_t>& values, std::vector<uint8_t>& echo)
     {
         echo = values;
         return Core::ERROR_NONE;
