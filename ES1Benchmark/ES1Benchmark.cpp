@@ -51,45 +51,69 @@ namespace Plugin {
         return string("ES1 JSON-RPC round-trip benchmark echo plugin");
     }
 
-    uint32_t ES1Benchmark::EchoString(const string& value, string& echo)
+    uint32_t ES1Benchmark::EchoString(const string& value, string& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        // TS2: Timestamp at API entry (after deserialization)
+        ts2 = Core::Time::Now().Ticks();
+        
         echo = value;
+        
+        // TS3: Timestamp before return (before serialization)
+        ts3 = Core::Time::Now().Ticks();
+        
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoArray(const std::vector<uint8_t>& values, std::vector<uint8_t>& echo)
+    uint32_t ES1Benchmark::EchoArray(const std::vector<uint8_t>& values, std::vector<uint8_t>& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        // TS2: Timestamp at API entry (after deserialization)
+        ts2 = Core::Time::Now().Ticks();
+        
         echo = values;
+        
+        // TS3: Timestamp before return (before serialization)
+        ts3 = Core::Time::Now().Ticks();
+        
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoUint32(const uint32_t value, uint32_t& echo)
+    uint32_t ES1Benchmark::EchoUint32(const uint32_t value, uint32_t& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        ts2 = Core::Time::Now().Ticks();
         echo = value;
+        ts3 = Core::Time::Now().Ticks();
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoUint64(const uint64_t value, uint64_t& echo)
+    uint32_t ES1Benchmark::EchoUint64(const uint64_t value, uint64_t& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        ts2 = Core::Time::Now().Ticks();
         echo = value;
+        ts3 = Core::Time::Now().Ticks();
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoBool(const bool value, bool& echo)
+    uint32_t ES1Benchmark::EchoBool(const bool value, bool& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        ts2 = Core::Time::Now().Ticks();
         echo = value;
+        ts3 = Core::Time::Now().Ticks();
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoFloat(const float value, float& echo)
+    uint32_t ES1Benchmark::EchoFloat(const float value, float& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        ts2 = Core::Time::Now().Ticks();
         echo = value;
+        ts3 = Core::Time::Now().Ticks();
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoDouble(const double value, double& echo)
+    uint32_t ES1Benchmark::EchoDouble(const double value, double& echo, uint64_t& ts2, uint64_t& ts3)
     {
+        ts2 = Core::Time::Now().Ticks();
         echo = value;
+        ts3 = Core::Time::Now().Ticks();
         return Core::ERROR_NONE;
     }
 
