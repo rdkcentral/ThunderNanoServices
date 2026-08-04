@@ -66,12 +66,3 @@ install(TARGETS ${MODULE_NAME}
 )
 
 write_config()
-
-# -------------------------------------------------------------------
-# Standalone measurement client (optional, enable with -DPLUGIN_ES1BENCHMARK_CLIENT=ON)
-# -------------------------------------------------------------------
-option(PLUGIN_ES1BENCHMARK_CLIENT "Build ES1Benchmark standalone measurement client" OFF)
-
-if(PLUGIN_ES1BENCHMARK_CLIENT)
-    add_subdirectory(client)
-endif()

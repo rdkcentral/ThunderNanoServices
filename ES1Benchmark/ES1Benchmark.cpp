@@ -19,8 +19,6 @@
 
 #include "ES1Benchmark.h"
 
-#include <vector>
-
 namespace WPEFramework {
 namespace Plugin {
 
@@ -59,22 +57,10 @@ namespace Plugin {
         return Core::ERROR_NONE;
     }
 
-    uint32_t ES1Benchmark::EchoArray(IUInt32Iterator* const values, IUInt32Iterator*& echo)
+    uint32_t ES1Benchmark::EchoArray(const std::vector<uint32_t>& values, std::vector<uint32_t>& echo)
     {
-        std::vector<uint32_t> output;
-
-        if (values != nullptr) {
-            uint32_t val;
-            values->Reset(0);
-            while (values->Next(val) == true) {
-                output.push_back(val);
-            }
-        }
-
-        using IteratorImpl = RPC::IteratorType<Exchange::IES1Benchmark::IUInt32Iterator>;
-        echo = Core::ServiceType<IteratorImpl>::Create<Exchange::IES1Benchmark::IUInt32Iterator>(output);
-
-        return (echo != nullptr ? Core::ERROR_NONE : Core::ERROR_GENERAL);
+        echo = values;
+        return Core::ERROR_NONE;
     }
 
     uint32_t ES1Benchmark::EchoUint32(const uint32_t value, uint32_t& echo)
