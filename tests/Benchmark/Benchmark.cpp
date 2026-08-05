@@ -376,11 +376,13 @@ namespace Plugin {
             PluginHost::JSONRPC::Unregister(_T("setBaseline"));
 
             _adminLock.Lock();
-            for (auto* sink : _notifications) {
+            std::vector<QualityAssurance::IBenchmark::INotification*> sinks;
+            sinks.swap(_notifications);
+            _adminLock.Unlock();
+
+            for (auto* sink : sinks) {
                 sink->Release();
             }
-            _notifications.clear();
-            _adminLock.Unlock();
 
             if (_payloadProxy != nullptr) {
                 _payloadProxy->Release();
@@ -517,26 +519,43 @@ namespace Plugin {
     Core::hresult Benchmark::Register(QualityAssurance::IBenchmark::INotification* sink)
     {
         if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
+
+        sink->AddRef();
+
+        bool releaseSink = false;
         _adminLock.Lock();
         auto it = std::find(_notifications.begin(), _notifications.end(), sink);
         if (it == _notifications.end()) {
-            sink->AddRef();
             _notifications.push_back(sink);
+        } else {
+            releaseSink = true;
         }
         _adminLock.Unlock();
+
+        if (releaseSink == true) {
+            sink->Release();
+        }
+
         return Core::ERROR_NONE;
     }
 
     Core::hresult Benchmark::Unregister(QualityAssurance::IBenchmark::INotification* sink)
     {
         if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
+
+        QualityAssurance::IBenchmark::INotification* toRelease = nullptr;
         _adminLock.Lock();
         auto it = std::find(_notifications.begin(), _notifications.end(), sink);
         if (it != _notifications.end()) {
-            (*it)->Release();
+            toRelease = *it;
             _notifications.erase(it);
         }
         _adminLock.Unlock();
+
+        if (toRelease != nullptr) {
+            toRelease->Release();
+        }
+
         return Core::ERROR_NONE;
     }
 
@@ -650,7 +669,7 @@ namespace Plugin {
                     if (_maxLatencyDeviationPct > 0 && baseline->second.roundTrip.avgNs > 0) {
                         double baselineAvg = static_cast<double>(baseline->second.roundTrip.avgNs);
                         double currentAvg = static_cast<double>(r.roundTrip.avgNs);
-                        double deviationMillipct = ((currentAvg - baselineAvg) / baselineAvg) * 100000.0;
+                        double deviationMillipct = (std::abs(currentAvg - baselineAvg) / baselineAvg) * 100000.0;
                         if (deviationMillipct > static_cast<double>(_maxLatencyDeviationPct)) {
                             latencyFailed = true;
                         }
