@@ -415,9 +415,9 @@ namespace Plugin {
         while (baseline->Next(entry) == true) {
             _baselines[entry.apiName] = entry;
         }
+        const uint32_t baselineCount = static_cast<uint32_t>(_baselines.size());
         _adminLock.Unlock();
-        TRACE(Trace::Information, (_T("Manual baseline set via COM-RPC with %u entries"),
-            static_cast<uint32_t>(_baselines.size())));
+        TRACE(Trace::Information, (_T("Manual baseline set via COM-RPC with %u entries"), baselineCount));
         return Core::ERROR_NONE;
     }
 
