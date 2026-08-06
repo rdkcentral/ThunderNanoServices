@@ -50,6 +50,8 @@ namespace Plugin {
         // IES1Benchmark
         uint32_t EchoString(const string& value, string& echo, uint64_t& ts2, uint64_t& ts3) override;
         uint32_t EchoArray(const std::vector<uint8_t>& values, std::vector<uint8_t>& echo, uint64_t& ts2, uint64_t& ts3) override;
+        uint32_t EchoMixedArray(const std::vector<Exchange::IES1Benchmark::MixedElement>& elements, std::vector<Exchange::IES1Benchmark::MixedElement>& echo, uint64_t& ts2, uint64_t& ts3) override;
+        uint32_t EchoNestedObjects(const std::vector<Exchange::IES1Benchmark::NestedObject>& objects, std::vector<Exchange::IES1Benchmark::NestedObject>& echo, uint64_t& ts2, uint64_t& ts3) override;
         uint32_t EchoUint32(const uint32_t value, uint32_t& echo, uint64_t& ts2, uint64_t& ts3) override;
         uint32_t EchoUint64(const uint64_t value, uint64_t& echo, uint64_t& ts2, uint64_t& ts3) override;
         uint32_t EchoBool(const bool value, bool& echo, uint64_t& ts2, uint64_t& ts3) override;
