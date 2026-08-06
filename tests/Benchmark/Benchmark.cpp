@@ -209,63 +209,6 @@ namespace Plugin {
             return result;
         }
 
-        // JSON-RPC params for setBaseline — mirrors the collectData result format
-        // so the caller can pass custom collectData output directly.
-        // Extra fields (minNs, maxNs, stddevNs, passed, failureReason, iterations) are accepted
-        // but ignored; only apiName, roundTrip.avgNs and memory.resident* are used.
-        struct BaselineEntryData : public Core::JSON::Container {
-            struct RoundTripData : public Core::JSON::Container {
-                RoundTripData() : Core::JSON::Container() { _Init(); }
-                // Move constructor: default-construct Container, move data, re-register fields.
-                // (Core::JSON::Container has a deleted move constructor, so the base must be
-                //  default-constructed; this pattern is used by all generated JSON types.)
-                RoundTripData(RoundTripData&& other) noexcept
-                    : Core::JSON::Container(), AvgNs(std::move(other.AvgNs)) { _Init(); }
-                Core::JSON::DecUInt64 AvgNs;
-            private:
-                void _Init() { Add(_T("avgNs"), &AvgNs); }
-            };
-
-            struct MemData : public Core::JSON::Container {
-                MemData() : Core::JSON::Container() { _Init(); }
-                MemData(MemData&& other) noexcept
-                    : Core::JSON::Container()
-                    , ResidentBefore(std::move(other.ResidentBefore))
-                    , ResidentAfter(std::move(other.ResidentAfter)) { _Init(); }
-                Core::JSON::DecUInt64 ResidentBefore;
-                Core::JSON::DecUInt64 ResidentAfter;
-            private:
-                void _Init() {
-                    Add(_T("residentBefore"), &ResidentBefore);
-                    Add(_T("residentAfter"),  &ResidentAfter);
-                }
-            };
-
-            BaselineEntryData() : Core::JSON::Container() { _Init(); }
-            BaselineEntryData(BaselineEntryData&& other) noexcept
-                : Core::JSON::Container()
-                , ApiName(std::move(other.ApiName))
-                , RoundTrip(std::move(other.RoundTrip))
-                , Memory(std::move(other.Memory)) { _Init(); }
-
-            bool IsDataValid() const { return ApiName.IsSet(); }
-            Core::JSON::String ApiName;
-            RoundTripData      RoundTrip;
-            MemData            Memory;
-        private:
-            void _Init() {
-                Add(_T("apiName"),   &ApiName);
-                Add(_T("roundTrip"), &RoundTrip);
-                Add(_T("memory"),    &Memory);
-            }
-        };
-
-        struct SetBaselineParamsData : public Core::JSON::Container {
-            SetBaselineParamsData() : Core::JSON::Container() { Add(_T("baseline"), &Baseline); }
-            bool IsDataValid() const { return Baseline.IsSet(); }
-            Core::JSON::ArrayType<BaselineEntryData> Baseline;
-        };
-
         // RAII guard for _triggerRunning — clears the flag on scope exit regardless
         // of how the function returns, preventing the plugin from getting stuck in
         // ERROR_INPROGRESS if an early-return path is added in the future.
@@ -282,7 +225,7 @@ namespace Plugin {
 
     const string Benchmark::Initialize(PluginHost::IShell* service)
     {
-        ASSERT(_benchmark == nullptr);
+        ASSERT(_payloadProxy == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
@@ -293,16 +236,12 @@ namespace Plugin {
 
         _service->Register(&_notification);
 
-        _benchmark = _service->Root<QualityAssurance::IBenchmark>(_connectionId, 2000, _T("BenchmarkImplementation"));
+        _payloadProxy = _service->Root<QualityAssurance::IBenchmarkPayload>(_connectionId, 2000, _T("BenchmarkImplementation"));
 
         string result;
-        if (_benchmark == nullptr) {
-            result = _T("Couldn't create Benchmark instance");
+        if (_payloadProxy == nullptr) {
+            result = _T("Couldn't create Benchmark payload proxy instance");
         } else {
-            _payloadProxy = _benchmark->QueryInterface<QualityAssurance::IBenchmarkPayload>();
-            if (_payloadProxy == nullptr) {
-                result = _T("Couldn't obtain IBenchmarkPayload interface from Benchmark implementation");
-            }
 
             if (result.empty()) {
                 if (_connectionId == 0) {
@@ -326,33 +265,6 @@ namespace Plugin {
                 // This prevents a partially initialised object from being reachable.
                 if (result.empty()) {
                     QualityAssurance::JBenchmark::Register(*this, this);
-
-                    // setBaseline is a supplementary method not in the generated JBenchmark
-                    // glue. It accepts the same array format that collectData returns.
-                    PluginHost::JSONRPC::Register<SetBaselineParamsData, void>(_T("setBaseline"),
-                        [this](const SetBaselineParamsData& params) -> uint32_t {
-                            if (!params.IsSet() || !params.IsDataValid()) return Core::ERROR_BAD_REQUEST;
-                            _adminLock.Lock();
-                            _baselines.clear();
-                            auto iter = params.Baseline.Elements();
-                            while (iter.Next() == true) {
-                                const BaselineEntryData& entry = iter.Current();
-                                if (!entry.ApiName.IsSet()) continue;
-                                QualityAssurance::IBenchmark::BenchmarkResult r{};
-                                r.apiName = static_cast<string>(entry.ApiName);
-                                if (entry.RoundTrip.AvgNs.IsSet())
-                                    r.roundTrip.avgNs = static_cast<uint64_t>(entry.RoundTrip.AvgNs);
-                                if (entry.Memory.ResidentBefore.IsSet())
-                                    r.memory.residentBefore = static_cast<uint64_t>(entry.Memory.ResidentBefore);
-                                if (entry.Memory.ResidentAfter.IsSet())
-                                    r.memory.residentAfter = static_cast<uint64_t>(entry.Memory.ResidentAfter);
-                                _baselines[r.apiName] = r;
-                            }
-                            _adminLock.Unlock();
-                            TRACE(Trace::Information, (_T("Manual baseline set with %u entries"),
-                                static_cast<uint32_t>(_baselines.size())));
-                            return Core::ERROR_NONE;
-                        });
                 }
             }
         }
@@ -371,9 +283,8 @@ namespace Plugin {
             _memory = nullptr;
         }
 
-        if (_benchmark != nullptr) {
+        if (_payloadProxy != nullptr) {
             QualityAssurance::JBenchmark::Unregister(*this);
-            PluginHost::JSONRPC::Unregister(_T("setBaseline"));
 
             _adminLock.Lock();
             std::vector<QualityAssurance::IBenchmark::INotification*> sinks;
@@ -384,14 +295,10 @@ namespace Plugin {
                 sink->Release();
             }
 
-            if (_payloadProxy != nullptr) {
-                _payloadProxy->Release();
-                _payloadProxy = nullptr;
-            }
-
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            VARIABLE_IS_NOT_USED uint32_t result = _benchmark->Release();
+            VARIABLE_IS_NOT_USED uint32_t result = _payloadProxy->Release();
+            _payloadProxy = nullptr;
 
             ASSERT((result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
@@ -399,8 +306,6 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-
-            _benchmark = nullptr;
         }
 
         _service->Release();

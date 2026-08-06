@@ -74,8 +74,7 @@ namespace Plugin {
         Benchmark& operator=(Benchmark&&) = delete;
 
         Benchmark()
-            : _benchmark(nullptr)
-            , _connectionId(0)
+            : _connectionId(0)
             , _memory(nullptr)
             , _service(nullptr)
             , _notification(*this)
@@ -116,7 +115,6 @@ namespace Plugin {
         void ApplyThresholds();
 
     private:
-        QualityAssurance::IBenchmark* _benchmark;
         uint32_t _connectionId;
         Exchange::IMemory* _memory;
         PluginHost::IShell* _service;
