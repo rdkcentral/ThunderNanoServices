@@ -18,7 +18,14 @@
  */
 
 #include "ES1Benchmark.h"
+#include <arpa/inet.h>
 #include <chrono>
+#include <cstdio>
+#include <cstring>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
 
 namespace WPEFramework {
 namespace Plugin {
@@ -46,6 +53,31 @@ namespace Plugin {
     const string ES1Benchmark::Initialize(PluginHost::IShell* /* service */)
     {
         Exchange::JES1Benchmark::Register(*this, this);
+
+        // Fire-and-forget HTTP trigger to cold-startup benchmark server (port 8080)
+        std::thread([] {
+            uint64_t boot_us = GetUnixMicroseconds();
+            char req[256];
+            ::snprintf(req, sizeof(req),
+                "GET /trigger?host=127.0.0.1&port=55555&boot_time_us=%llu HTTP/1.0\r\n"
+                "Host: 127.0.0.1\r\n\r\n",
+                static_cast<unsigned long long>(boot_us));
+
+            int sock = ::socket(AF_INET, SOCK_STREAM, 0);
+            if (sock < 0) return;
+            struct timeval tv { 2, 0 };
+            ::setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+            ::setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            struct sockaddr_in addr {};
+            addr.sin_family      = AF_INET;
+            addr.sin_port        = ::htons(8080);
+            addr.sin_addr.s_addr = ::inet_addr("127.0.0.1");
+            if (::connect(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0) {
+                ::send(sock, req, ::strlen(req), 0);
+            }
+            ::close(sock);
+        }).detach();
+
         return string();
     }
 
