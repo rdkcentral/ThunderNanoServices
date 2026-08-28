@@ -24,6 +24,7 @@
 #include <cinttypes>
 #include <cmath>
 #include <cstdio>
+#include <time.h>
 
 namespace Thunder {
 namespace BenchmarkMemory {
@@ -94,46 +95,64 @@ namespace Plugin {
     namespace {
 
         struct LatencyAccumulator {
-            std::vector<uint64_t> samplesUs;
+            std::vector<uint64_t> samplesNs;  // true nanosecond samples
 
-            void Record(uint64_t us)
+            void Record(uint64_t ns)
             {
-                samplesUs.push_back(us);
+                samplesNs.push_back(ns);
             }
 
             QualityAssurance::IBenchmark::RoundTripStats Stats() const
             {
                 QualityAssurance::IBenchmark::RoundTripStats stats{};
-                if (samplesUs.empty()) return stats;
+                if (samplesNs.empty()) return stats;
 
                 uint64_t sum = 0;
                 uint64_t minVal = UINT64_MAX;
                 uint64_t maxVal = 0;
 
-                for (auto v : samplesUs) {
+                for (auto v : samplesNs) {
                     sum += v;
                     if (v < minVal) minVal = v;
                     if (v > maxVal) maxVal = v;
                 }
 
-                uint64_t avg = sum / samplesUs.size();
+                const uint64_t n = samplesNs.size();
+                const uint64_t avg = sum / n;
 
                 double variance = 0.0;
-                for (auto v : samplesUs) {
+                for (auto v : samplesNs) {
                     double diff = static_cast<double>(v) - static_cast<double>(avg);
                     variance += diff * diff;
                 }
-                variance /= samplesUs.size();
+                // sample variance (n-1); falls back to n when n==1 (n>0 guaranteed by early return above)
+                variance /= static_cast<double>(n > 1 ? n - 1 : n);
 
-                // Convert µs to ns for the interface
-                stats.minNs = minVal * 1000;
-                stats.avgNs = avg * 1000;
-                stats.maxNs = maxVal * 1000;
-                stats.stddevNs = static_cast<uint64_t>(std::sqrt(variance)) * 1000;
+                stats.minNs    = minVal;
+                stats.avgNs    = avg;
+                stats.maxNs    = maxVal;
+                stats.stddevNs = static_cast<uint64_t>(std::sqrt(variance));
 
                 return stats;
             }
         };
+
+        // Read CLOCK_MONOTONIC directly for true nanosecond resolution.
+        // Core::StopWatch uses SystemInfo::Ticks() which returns microseconds;
+        // multiplying by 1000 gives µs-precision values dressed as ns.
+        // Returns 0 on clock_gettime failure; 0 is an unambiguous sentinel because
+        // successful timestamps are biased by +1 so the value is always >= 1.
+        // CLOCK_MONOTONIC can legally return 0 very early after boot, so without
+        // the bias the first sample(s) would be incorrectly discarded as failures.
+        inline uint64_t NowNs()
+        {
+            struct timespec ts{};
+            if (::clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+                return 0;
+            }
+            // Add 1 so a legal all-zero reading is never confused with the failure sentinel.
+            return static_cast<uint64_t>(ts.tv_sec) * UINT64_C(1000000000) + static_cast<uint64_t>(ts.tv_nsec) + 1;
+        }
 
         template<typename CALLABLE>
         QualityAssurance::IBenchmark::BenchmarkResult MeasurePayloadMethod(
@@ -145,49 +164,68 @@ namespace Plugin {
             uint64_t allocatedBefore = memory->Allocated();
 
             LatencyAccumulator acc;
-            uint32_t completedIterations = 0;
+            uint32_t samplesRecorded = 0;   // iterations with a valid timing sample in acc
+            uint32_t fnCallsSucceeded = 0;  // fn() calls that returned ERROR_NONE
 
-            // Single pass: time each call individually, derive avg from the sum
-            Core::StopWatch batchTimer;
             for (uint32_t i = 0; i < iterations; i++) {
-                Core::StopWatch timer;
+                const uint64_t t0 = NowNs();
                 uint32_t hr = fn();
-                uint64_t elapsedUs = timer.Elapsed();
+                const uint64_t t1 = NowNs();
                 if (hr != Core::ERROR_NONE) {
                     SYSLOG(Logging::Error, (_T("COM-RPC call '%s' failed on iteration %u with error 0x%08X"),
                         apiName.c_str(), i, hr));
                     break;
                 }
-                acc.Record(elapsedUs);
-                completedIterations++;
+                fnCallsSucceeded++;
+                // Skip sample if either clock read failed (returns 0) or the clock regressed.
+                // Each iteration pays two clock_gettime calls (t0 and t1); for very fast
+                // in-process calls this overhead is a significant part of the measured interval.
+                if (t0 == 0 || t1 == 0 || t1 < t0) {
+                    SYSLOG(Logging::Error, (_T("Clock anomaly on '%s' iteration %u -- sample skipped"),
+                        apiName.c_str(), i));
+                    continue;
+                }
+                acc.Record(t1 - t0);
+                samplesRecorded++;
             }
-            uint64_t totalBatchUs = batchTimer.Elapsed();
 
             uint64_t residentAfter = memory->Resident();
             uint64_t allocatedAfter = memory->Allocated();
 
             QualityAssurance::IBenchmark::BenchmarkResult result{};
             result.apiName = apiName;
-            result.iterations = completedIterations;
+            // iterations = number of timing samples in roundTrip (consistent with the stats).
+            // passed requires both: all fn() calls succeeded AND every iteration produced a
+            // valid timing sample. A skipped sample means partial/unreliable data, so the
+            // result is marked failed even if the underlying COM-RPC calls all succeeded.
+            result.iterations = samplesRecorded;
             result.roundTrip = acc.Stats();
-            // Override avgNs with batch-derived value for better precision
-            if (completedIterations > 0) {
-                result.roundTrip.avgNs = (totalBatchUs * 1000) / completedIterations;
-            }
-            result.memory.residentBefore = residentBefore;
-            result.memory.residentAfter = residentAfter;
+            result.passed = (fnCallsSucceeded == iterations) && (samplesRecorded == fnCallsSucceeded);
+            result.memory.residentBefore  = residentBefore;
+            result.memory.residentAfter   = residentAfter;
             result.memory.allocatedBefore = allocatedBefore;
-            result.memory.allocatedAfter = allocatedAfter;
-            result.passed = (completedIterations == iterations);
+            result.memory.allocatedAfter  = allocatedAfter;
 
             return result;
         }
+
+        // RAII guard for _triggerRunning — clears the flag on scope exit regardless
+        // of how the function returns, preventing the plugin from getting stuck in
+        // ERROR_INPROGRESS if an early-return path is added in the future.
+        struct TriggerGuard {
+            explicit TriggerGuard(std::atomic_flag& flag) : _flag(flag) {}
+            TriggerGuard(const TriggerGuard&) = delete;
+            TriggerGuard& operator=(const TriggerGuard&) = delete;
+            ~TriggerGuard() { _flag.clear(); }
+        private:
+            std::atomic_flag& _flag;
+        };
 
     } // anonymous namespace
 
     const string Benchmark::Initialize(PluginHost::IShell* service)
     {
-        ASSERT(_benchmark == nullptr);
+        ASSERT(_payloadProxy == nullptr);
         ASSERT(_memory == nullptr);
         ASSERT(_service == nullptr);
         ASSERT(service != nullptr);
@@ -198,22 +236,14 @@ namespace Plugin {
 
         _service->Register(&_notification);
 
-        _benchmark = _service->Root<QualityAssurance::IBenchmark>(_connectionId, 2000, _T("BenchmarkImplementation"));
+        _payloadProxy = _service->Root<QualityAssurance::IBenchmarkPayload>(_connectionId, 2000, _T("BenchmarkImplementation"));
 
         string result;
-        if (_benchmark == nullptr) {
-            result = _T("Couldn't create Benchmark instance");
+        if (_payloadProxy == nullptr) {
+            result = _T("Couldn't create Benchmark payload proxy instance");
         } else {
-            _payloadProxy = _benchmark->QueryInterface<QualityAssurance::IBenchmarkPayload>();
-            if (_payloadProxy == nullptr) {
-                result = _T("Couldn't obtain IBenchmarkPayload interface from Benchmark implementation");
-            }
 
             if (result.empty()) {
-                RegisterJsonRpcHandlers();
-
-                _benchmark->Register(&_benchmarkNotification);
-
                 if (_connectionId == 0) {
                     _memory = Thunder::BenchmarkMemory::MemoryObserver(nullptr);
                 } else {
@@ -229,6 +259,12 @@ namespace Plugin {
 
                 if (_memory == nullptr && result.empty()) {
                     result = _T("Benchmark could not instantiate a Memory observer!");
+                }
+
+                // Register JSON-RPC only after all fallible init steps have succeeded.
+                // This prevents a partially initialised object from being reachable.
+                if (result.empty()) {
+                    QualityAssurance::JBenchmark::Register(*this, this);
                 }
             }
         }
@@ -247,19 +283,22 @@ namespace Plugin {
             _memory = nullptr;
         }
 
-        if (_benchmark != nullptr) {
-            _benchmark->Unregister(&_benchmarkNotification);
+        if (_payloadProxy != nullptr) {
+            QualityAssurance::JBenchmark::Unregister(*this);
 
-            UnregisterJsonRpcHandlers();
+            _adminLock.Lock();
+            std::vector<QualityAssurance::IBenchmark::INotification*> sinks;
+            sinks.swap(_notifications);
+            _adminLock.Unlock();
 
-            if (_payloadProxy != nullptr) {
-                _payloadProxy->Release();
-                _payloadProxy = nullptr;
+            for (auto* sink : sinks) {
+                sink->Release();
             }
 
             RPC::IRemoteConnection* connection(_service->RemoteConnection(_connectionId));
 
-            VARIABLE_IS_NOT_USED uint32_t result = _benchmark->Release();
+            VARIABLE_IS_NOT_USED uint32_t result = _payloadProxy->Release();
+            _payloadProxy = nullptr;
 
             ASSERT((result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
 
@@ -267,8 +306,6 @@ namespace Plugin {
                 connection->Terminate();
                 connection->Release();
             }
-
-            _benchmark = nullptr;
         }
 
         _service->Release();
@@ -289,78 +326,151 @@ namespace Plugin {
         }
     }
 
-    void Benchmark::BenchmarkCompleted()
+    Core::hresult Benchmark::Trigger(const uint32_t iterations)
     {
+        if (iterations == 0) {
+            return Core::ERROR_BAD_REQUEST;
+        }
+        // Reject concurrent triggers: interleaved results would corrupt the result set
+        // and produce an incorrect allPassed evaluation.
+        if (_triggerRunning.test_and_set()) {
+            return Core::ERROR_INPROGRESS;
+        }
+        TriggerGuard guard(_triggerRunning);
+
+        RunPayloadBenchmarks(iterations);
+        ApplyThresholds();
+
+        _adminLock.Lock();
+        std::vector<QualityAssurance::IBenchmark::INotification*> sinks(_notifications);
+        for (auto* sink : sinks) sink->AddRef();
+        bool allPassed = std::all_of(_results.begin(), _results.end(),
+            [](const QualityAssurance::IBenchmark::BenchmarkResult& r) { return r.passed; });
+        _adminLock.Unlock();
+
+        for (auto* sink : sinks) {
+            sink->PerformanceCheckCompleted();
+            sink->Release();
+        }
+
         QualityAssurance::JBenchmark::Event::PerformanceCheckCompleted(*this);
+
+        TRACE(Trace::Information, (_T("Benchmark completed: %u iterations via COM-RPC proxy"), iterations));
+        return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
     }
 
-    void Benchmark::RegisterJsonRpcHandlers()
+    Core::hresult Benchmark::CollectData(QualityAssurance::IBenchmark::IBenchmarkResultIterator*& report) const
     {
-        PluginHost::JSONRPC::RegisterVersion(_T("JBenchmark"), 2, 0, 0);
+        _adminLock.Lock();
+        std::vector<QualityAssurance::IBenchmark::BenchmarkResult> snapshot(_results);
+        _adminLock.Unlock();
 
-        // Method: 'Trigger' — runs benchmarks via COM-RPC proxy
-        PluginHost::JSONRPC::Register<JsonData::Benchmark::TriggerParamsData, void>(_T("Trigger"),
-            [this](const JsonData::Benchmark::TriggerParamsData& params) -> uint32_t {
-                if ((params.IsSet() == false) || (params.IsDataValid() == false)) {
-                    return Core::ERROR_BAD_REQUEST;
-                }
-
-                _adminLock.Lock();
-                _results.clear();
-                _adminLock.Unlock();
-
-                RunPayloadBenchmarks(params.Iterations);
-                ApplyThresholds();
-
-                QualityAssurance::JBenchmark::Event::PerformanceCheckCompleted(*this);
-
-                _adminLock.Lock();
-                bool allPassed = std::all_of(_results.begin(), _results.end(),
-                    [](const QualityAssurance::IBenchmark::BenchmarkResult& r) { return r.passed; });
-                _adminLock.Unlock();
-
-                TRACE(Trace::Information, (_T("Benchmark completed: %u iterations via COM-RPC proxy"),
-                    static_cast<uint32_t>(params.Iterations)));
-                return allPassed ? Core::ERROR_NONE : Core::ERROR_GENERAL;
-            });
-
-        // Method: 'CollectData' — returns shell-side results
-        PluginHost::JSONRPC::Register<void, Core::JSON::ArrayType<JsonData::Benchmark::BenchmarkResultData>>(_T("CollectData"),
-            [this](Core::JSON::ArrayType<JsonData::Benchmark::BenchmarkResultData>& report) -> uint32_t {
-                _adminLock.Lock();
-                report.Set(true);
-                for (const auto& r : _results) {
-                    report.Add() = r;
-                }
-                _adminLock.Unlock();
-                return Core::ERROR_NONE;
-            });
-
-        // Property: 'LatencyThreshold' — max allowed latency deviation in millipercent
-        PluginHost::JSONRPC::Property<Core::JSON::DecUInt32>(_T("LatencyThreshold"),
-            &Benchmark::GetLatencyThreshold, &Benchmark::SetLatencyThreshold, this);
-
-        // Property: 'MemoryThreshold' — max allowed RSS growth in bytes
-        PluginHost::JSONRPC::Property<Core::JSON::DecUInt64>(_T("MemoryThreshold"),
-            &Benchmark::GetMemoryThreshold, &Benchmark::SetMemoryThreshold, this);
+        using Iterator = RPC::IteratorType<QualityAssurance::IBenchmark::IBenchmarkResultIterator>;
+        report = Core::ServiceType<Iterator>::Create<QualityAssurance::IBenchmark::IBenchmarkResultIterator>(snapshot);
+        return Core::ERROR_NONE;
     }
 
-    void Benchmark::UnregisterJsonRpcHandlers()
+    Core::hresult Benchmark::LatencyThreshold(const uint32_t maxLatencyDeviationPct)
     {
-        PluginHost::JSONRPC::Unregister(_T("Trigger"));
-        PluginHost::JSONRPC::Unregister(_T("CollectData"));
-        PluginHost::JSONRPC::Unregister(_T("LatencyThreshold"));
-        PluginHost::JSONRPC::Unregister(_T("MemoryThreshold"));
+        _adminLock.Lock();
+        _maxLatencyDeviationPct = maxLatencyDeviationPct;
+        _baselines.clear();
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Latency threshold set: %u millipercent"), maxLatencyDeviationPct));
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::LatencyThreshold(uint32_t& maxLatencyDeviationPct) const
+    {
+        _adminLock.Lock();
+        maxLatencyDeviationPct = _maxLatencyDeviationPct;
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::MemoryThreshold(const uint64_t maxMemoryGrowthBytes)
+    {
+        _adminLock.Lock();
+        _maxMemoryGrowthBytes = maxMemoryGrowthBytes;
+        _baselines.clear();
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Memory threshold set: %" PRIu64 " bytes"), maxMemoryGrowthBytes));
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::MemoryThreshold(uint64_t& maxMemoryGrowthBytes) const
+    {
+        _adminLock.Lock();
+        maxMemoryGrowthBytes = _maxMemoryGrowthBytes;
+        _adminLock.Unlock();
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::SetBaseline(QualityAssurance::IBenchmark::IBenchmarkResultIterator* baseline)
+    {
+        if (baseline == nullptr) return Core::ERROR_BAD_REQUEST;
+        _adminLock.Lock();
+        _baselines.clear();
+        QualityAssurance::IBenchmark::BenchmarkResult entry{};
+        while (baseline->Next(entry) == true) {
+            _baselines[entry.apiName] = entry;
+        }
+        const uint32_t baselineCount = static_cast<uint32_t>(_baselines.size());
+        _adminLock.Unlock();
+        TRACE(Trace::Information, (_T("Manual baseline set via COM-RPC with %u entries"), baselineCount));
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::Register(QualityAssurance::IBenchmark::INotification* sink)
+    {
+        if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
+
+        sink->AddRef();
+
+        bool releaseSink = false;
+        _adminLock.Lock();
+        auto it = std::find(_notifications.begin(), _notifications.end(), sink);
+        if (it == _notifications.end()) {
+            _notifications.push_back(sink);
+        } else {
+            releaseSink = true;
+        }
+        _adminLock.Unlock();
+
+        if (releaseSink == true) {
+            sink->Release();
+        }
+
+        return Core::ERROR_NONE;
+    }
+
+    Core::hresult Benchmark::Unregister(QualityAssurance::IBenchmark::INotification* sink)
+    {
+        if (sink == nullptr) return Core::ERROR_BAD_REQUEST;
+
+        QualityAssurance::IBenchmark::INotification* toRelease = nullptr;
+        _adminLock.Lock();
+        auto it = std::find(_notifications.begin(), _notifications.end(), sink);
+        if (it != _notifications.end()) {
+            toRelease = *it;
+            _notifications.erase(it);
+        }
+        _adminLock.Unlock();
+
+        if (toRelease != nullptr) {
+            toRelease->Release();
+        }
+
+        return Core::ERROR_NONE;
     }
 
     void Benchmark::RunPayloadBenchmarks(uint32_t iterations)
     {
         ASSERT(_payloadProxy != nullptr);
 
-        auto addResult = [this](QualityAssurance::IBenchmark::BenchmarkResult&& r) {
-            _adminLock.Lock();
-            _results.push_back(std::move(r));
-            _adminLock.Unlock();
+        std::vector<QualityAssurance::IBenchmark::BenchmarkResult> localResults;
+        auto addResult = [&localResults](QualityAssurance::IBenchmark::BenchmarkResult&& r) {
+            localResults.push_back(std::move(r));
         };
 
         addResult(MeasurePayloadMethod("SendUint32", iterations, _memory, [this]() -> uint32_t {
@@ -430,6 +540,10 @@ namespace Plugin {
             uint32_t result = 0;
             return _payloadProxy->Add(17, 25, result);
         }));
+
+        _adminLock.Lock();
+        _results = std::move(localResults);
+        _adminLock.Unlock();
     }
 
     void Benchmark::ApplyThresholds()
@@ -460,7 +574,7 @@ namespace Plugin {
                     if (_maxLatencyDeviationPct > 0 && baseline->second.roundTrip.avgNs > 0) {
                         double baselineAvg = static_cast<double>(baseline->second.roundTrip.avgNs);
                         double currentAvg = static_cast<double>(r.roundTrip.avgNs);
-                        double deviationMillipct = ((currentAvg - baselineAvg) / baselineAvg) * 100000.0;
+                        double deviationMillipct = (std::abs(currentAvg - baselineAvg) / baselineAvg) * 100000.0;
                         if (deviationMillipct > static_cast<double>(_maxLatencyDeviationPct)) {
                             latencyFailed = true;
                         }
@@ -494,42 +608,6 @@ namespace Plugin {
             }
         }
         _adminLock.Unlock();
-    }
-
-    uint32_t Benchmark::GetLatencyThreshold(Core::JSON::DecUInt32& value) const
-    {
-        _adminLock.Lock();
-        value = _maxLatencyDeviationPct;
-        _adminLock.Unlock();
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t Benchmark::SetLatencyThreshold(const Core::JSON::DecUInt32& value)
-    {
-        _adminLock.Lock();
-        _maxLatencyDeviationPct = value;
-        _baselines.clear();
-        _adminLock.Unlock();
-        TRACE(Trace::Information, (_T("Latency threshold set: %u millipercent"), static_cast<uint32_t>(value)));
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t Benchmark::GetMemoryThreshold(Core::JSON::DecUInt64& value) const
-    {
-        _adminLock.Lock();
-        value = _maxMemoryGrowthBytes;
-        _adminLock.Unlock();
-        return Core::ERROR_NONE;
-    }
-
-    uint32_t Benchmark::SetMemoryThreshold(const Core::JSON::DecUInt64& value)
-    {
-        _adminLock.Lock();
-        _maxMemoryGrowthBytes = value;
-        _baselines.clear();
-        _adminLock.Unlock();
-        TRACE(Trace::Information, (_T("Memory threshold set: %" PRIu64 " bytes"), static_cast<uint64_t>(value)));
-        return Core::ERROR_NONE;
     }
 
 }

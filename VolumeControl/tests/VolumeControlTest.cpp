@@ -120,7 +120,7 @@ namespace Tests {
             plugin.Callsign = Callsign;
             plugin.ClassName = ClassName;
             plugin.Locator = Locator;
-            plugin.StartMode = PluginHost::IShell::startmode::ACTIVATED;
+            plugin.StartMode = Thunder::Plugin::Configuration::startmode::ACTIVATED;
 
             std::vector<TestCore::ThunderTestRuntime::PluginConfig> plugins{ plugin };
 

@@ -28,7 +28,7 @@ namespace Tests {
             dummyConfig.Callsign = "TestPlugin";
             dummyConfig.ClassName = "TestPlugin";
             dummyConfig.Locator = "libThunderTestPlugin.so";
-            dummyConfig.StartMode = PluginHost::IShell::startmode::ACTIVATED;
+            dummyConfig.StartMode = Thunder::Plugin::Configuration::startmode::ACTIVATED;
 
             std::vector<ThunderTestRuntime::PluginConfig> plugins;
             plugins.push_back(dummyConfig);
