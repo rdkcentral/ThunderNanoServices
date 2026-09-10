@@ -1,0 +1,11 @@
+startmode = "@PLUGIN_PRIVATECOMRPCTEST_STARTMODE@"
+resumed = "@PLUGIN_PRIVATECOMRPCTEST_RESUMED@"
+
+communicator = "/tmp/privatecomrpctest"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "Local")
+
+configuration.add("root", root)
