@@ -41,7 +41,7 @@ uint32_t QASecurityTarget::endpoint_echo()
 
 
 const string QASecurityTarget::Initialize(
-    PluginHost::IShell* service)
+    PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     ASSERT(service != nullptr);
 
@@ -52,7 +52,7 @@ const string QASecurityTarget::Initialize(
 
 
 void QASecurityTarget::Deinitialize(
-    PluginHost::IShell* service)
+    PluginHost::IShell* service VARIABLE_IS_NOT_USED)
 {
     ASSERT(service != nullptr);
 
@@ -66,7 +66,7 @@ string QASecurityTarget::Information() const
 }
 
 void QASecurityTarget::Inbound(
-    Web::Request& request)
+    Web::Request& request VARIABLE_IS_NOT_USED)
 {
     // No special processing is required.
 }

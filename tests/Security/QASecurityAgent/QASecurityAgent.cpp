@@ -93,7 +93,7 @@ string QASecurityAgent::Information() const
  * Called by Thunder after the plugin has reached ACTIVATED.
  */
 void QASecurityAgent::Notification::Activated(
-    const string& callsign,
+    const string& callsign VARIABLE_IS_NOT_USED,
     PluginHost::IShell* plugin)
 {
     ASSERT(plugin != nullptr);
@@ -140,8 +140,8 @@ void QASecurityAgent::Notification::Activated(
 }
 
 void QASecurityAgent::Notification::Deactivated(
-    const string& callsign,
-    PluginHost::IShell* plugin)
+    const string& callsign VARIABLE_IS_NOT_USED,
+    PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
 {
     /*
      * Thunder manages the subsystem lifecycle during plugin
@@ -150,8 +150,8 @@ void QASecurityAgent::Notification::Deactivated(
 }
 
 void QASecurityAgent::Notification::Unavailable(
-    const string& callsign,
-    PluginHost::IShell* plugin)
+    const string& callsign VARIABLE_IS_NOT_USED,
+    PluginHost::IShell* plugin VARIABLE_IS_NOT_USED)
 {
     /*
      * Nothing required for the QA plugin.

@@ -14,7 +14,7 @@ QASecurityContext::QASecurityContext(
 {
 }
 
-bool QASecurityContext::Allowed(const string& path) const
+bool QASecurityContext::Allowed(const string& path VARIABLE_IS_NOT_USED) const
 {
     ++_pathCalls;
 
@@ -22,7 +22,7 @@ bool QASecurityContext::Allowed(const string& path) const
 }
 
 bool QASecurityContext::Allowed(
-    const Web::Request& request) const
+    const Web::Request& request VARIABLE_IS_NOT_USED) const
 {
     ++_httpCalls;
 
@@ -30,7 +30,7 @@ bool QASecurityContext::Allowed(
 }
 
 bool QASecurityContext::Allowed(
-    const Core::JSONRPC::Message& message) const
+    const Core::JSONRPC::Message& message VARIABLE_IS_NOT_USED) const
 {
     ++_jsonRpcCalls;
 
