@@ -125,7 +125,7 @@ namespace Plugin {
     }
 
     uint32_t JSONRPCThrottle::Delay(
-        const Core::JSONRPC::Context& /*context*/,
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED,
         const DelayParams& params)
     {
         std::cout
@@ -160,7 +160,7 @@ namespace Plugin {
     }
 
     uint32_t JSONRPCThrottle::Fast(
-        const Core::JSONRPC::Context& /*context*/)
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED)
     {
         Enter();
         Leave();
@@ -169,7 +169,7 @@ namespace Plugin {
     }
 
     uint32_t JSONRPCThrottle::GetStatistics(
-        const Core::JSONRPC::Context& /*context*/,
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED,
         Statistics& response)
     {
         response.TotalCalls =
@@ -185,7 +185,7 @@ namespace Plugin {
     }
 
     uint32_t JSONRPCThrottle::Reset(
-        const Core::JSONRPC::Context& /*context*/)
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED)
     {
         _totalCalls = 0;
         _activeCalls = 0;

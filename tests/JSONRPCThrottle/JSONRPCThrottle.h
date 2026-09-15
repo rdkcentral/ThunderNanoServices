@@ -81,18 +81,18 @@ private:
 
 private:
     uint32_t Delay(
-        const Core::JSONRPC::Context& context,
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED,
         const DelayParams& params);
 
     uint32_t Fast(
-        const Core::JSONRPC::Context& context);
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED);
 
     uint32_t GetStatistics(
-        const Core::JSONRPC::Context& context,
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED,
         Statistics& response);
 
     uint32_t Reset(
-        const Core::JSONRPC::Context& context);
+        const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED);
 
     void Enter();
     void Leave();
