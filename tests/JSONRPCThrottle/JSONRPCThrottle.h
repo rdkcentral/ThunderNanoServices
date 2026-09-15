@@ -44,8 +44,8 @@ public:
 
 public:
     // IPlugin
-    const string Initialize(PluginHost::IShell* service) override;
-    void Deinitialize(PluginHost::IShell* service) override;
+    const string Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED) override;
+    void Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED) override;
     string Information() const override;
 
 private:

@@ -77,7 +77,7 @@ namespace Plugin {
     }
 
     const string JSONRPCThrottle::Initialize(
-        PluginHost::IShell* service)
+        PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(service != nullptr);
 
@@ -89,7 +89,7 @@ namespace Plugin {
     }
 
     void JSONRPCThrottle::Deinitialize(
-        PluginHost::IShell* service)
+        PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         ASSERT(service != nullptr);
     }
