@@ -29,6 +29,9 @@ namespace Thunder {
 
 namespace Trace {
 
+    DEFINE_MESSAGING_CATEGORY(Core::Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, ActivationQueueInfo);
+    DEFINE_MESSAGING_CATEGORY(Core::Messaging::BaseCategoryType<Core::Messaging::Metadata::type::TRACING>, DetailedInfo);
+#if 0
     class ActivationQueueInfo {
     public:
         ActivationQueueInfo(const TCHAR formatter[], ...)
@@ -96,7 +99,11 @@ namespace Trace {
     private:
         std::string _text;
     };
+
+#endif
+
 }
+
 
 namespace Plugin {
     
@@ -186,7 +193,7 @@ POP_WARNING()
             PluginStarter(PluginHost::IShell* requestedPluginShell
                          , const uint8_t maxnumberretries
                          , const uint16_t delay
-                         , IPluginAsyncStateControl::IActivationCallback* const callback
+                         , IPluginAsyncStateControl::IRequestCallback* const callback
                          , PluginInitializerService& initservice)
                 : _callsign()
                 , _requestedPluginShell(requestedPluginShell)
@@ -320,14 +327,14 @@ POP_WARNING()
                  case PluginHost::IShell::ACTIVATED: 
                  case PluginHost::IShell::HIBERNATED:
                     TRACE(Trace::Warning, (_T("Activation started for plugin [%s] that is already Activated (so not started by the PluginInitializerService)"), Callsign().c_str()));
-                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
+                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::SUCCESS);
                     done = true;
                     break;
                 case PluginHost::IShell::DESTROYED:
                 case PluginHost::IShell::UNAVAILABLE:
                     ASSERT(false); // this would be so unexpected, lets assert... (but in case ASSERT is not executed or does not lead to abort we must notify the initiator to unblock him)
                     TRACE(Trace::Error, (_T("Activation started for plugin [%s] that is in an invalid state!"), Callsign().c_str()));
-                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
+                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::FAILURE);
                     done = true;
                     break;
                 case PluginHost::IShell::DEACTIVATION:
@@ -358,7 +365,7 @@ POP_WARNING()
             {
                 TRACE(Trace::Information, (_T("Aborting activating plugin [%s]"), Callsign().c_str()));
                 SetInactive();
-                NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::ABORTED);
+                NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::ABORTED);
             }
 
             uint8_t Retries() const
@@ -381,7 +388,7 @@ POP_WARNING()
                     TRACE(Trace::Warning, (_T("Plugin [%s] was activated but this was not initiated from the PluginInitializerService!!"), Callsign().c_str()));
                 }
                 SetInactive();
-                NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
+                NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::SUCCESS);
                 // we will be removed and destroyed from the caller
             }
 
@@ -415,7 +422,7 @@ POP_WARNING()
 
                     if (_attempt > _maxnumberretries) { // first attempt not included, that is not a retry...
                         TRACE(Trace::Error, (_T("Plugin [%s] could not be restarted within the allowed number of retries (retries %u)"), Callsign().c_str(), Retries()));
-                        NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
+                        NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::FAILURE);
                         // we should revoke the job as that might be necessary in case the PluginStarter did not cause this Deinitialized notification but it was because of an external Activation but we cannot do that here (as that might deadlock because we are in the same lock as the job is using)
                         result = ResultCode::Failed; // will be removed and destroyed by caller
                     } else if (_waitingPrecondition == false) {
@@ -488,20 +495,20 @@ POP_WARNING()
                 case Core::ERROR_UNAVAILABLE:
                     // consider startup failed and remove from list
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to plugin being in state in which it cannot be started [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
-                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
+                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::FAILURE);
                     resultcode = ResultCode::Failed; // will result in Failed being called to deactivate the jobs
                     break;
                 case Core::ERROR_BAD_REQUEST:
                     // there is a problem to wakeup from hibernation, external to the PluginStarter the plugin must have been set to hibernate (as we would not try to activate it out of hibernation) -> we cannot do anything more, we'll consider it activated (as hibernate is a substate of Activation and report success to unblock the caller here, Activated notification will not be called) 
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed because Plugin moved to Hibernate state in the mean time (triggered externally) and could not be awaken"), Callsign().c_str()));
-                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS);
+                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::SUCCESS);
                     resultcode = ResultCode::Failed; // will result in Failed being called to deactivate the jobs
                     break;
                 default:
                     // result code not expected, nothing else to do then assert (and consider ourselves failed to not block other starters and unblock the user of the IPluginAsyncStateControl interface
                     ASSERT(false);
                     TRACE(Trace::Error, (_T("Plugin [%s] Activation failed due to unexpected reason [%s][%u]"), Callsign().c_str(), Core::ErrorToString(result), result));
-                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE);
+                    NotifyInitiator(Exchange::IPluginAsyncStateControl::IRequestCallback::state::FAILURE);
                     resultcode = ResultCode::Failed;  // will result in Failed being called to deactivate the jobs
                 }
 
@@ -563,11 +570,11 @@ POP_WARNING()
                 }
             }
 
-            void NotifyInitiator(const Exchange::IPluginAsyncStateControl::IActivationCallback::state state)
+            void NotifyInitiator(const Exchange::IPluginAsyncStateControl::IRequestCallback::state state)
             {
                 if (_callback != nullptr) {
                     // as the IPluginAsyncStateControl does not have a json interface at this moment no enum conversion generated
-                    TRACE(Trace::DetailedInfo, (_T("Result Callback called for plugin [%s] with state [%s]"), Callsign().c_str(), (state == Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS ? _T("success") : (state == Exchange::IPluginAsyncStateControl::IActivationCallback::state::FAILURE ? _T("failure") : _T("aborted")))));
+                    TRACE(Trace::DetailedInfo, (_T("Result Callback called for plugin [%s] with state [%s]"), Callsign().c_str(), (state == Exchange::IPluginAsyncStateControl::IRequestCallback::state::SUCCESS ? _T("success") : (state == Exchange::IPluginAsyncStateControl::IRequestCallback::state::FAILURE ? _T("failure") : _T("aborted")))));
                     // for now let's not decouple. In the future if users prove to be unreliable we might however to not block Thunder internally
                     _callback->Finished(Callsign(), state, Retries());
                 }
@@ -730,6 +737,7 @@ POP_WARNING()
             void Dispatch() override
             {
                 _active = false;
+
                 TRACE(Trace::Information, (_T("Activating plugin form ActivateJob [%s]"), _requestedPluginShell->Callsign().c_str()));
                 Core::hresult result = _requestedPluginShell->Activate(PluginHost::IShell::REQUESTED);
                 // after the previous call the plugin could reached state Started or fully deactivated (due to the notifications triggered from it) and not be available anymore in the PluginInitializerService queue...
@@ -760,7 +768,7 @@ POP_WARNING()
             uint8_t _attempt;
             uint8_t _maxnumberretries;
             uint16_t _delay;
-            IPluginAsyncStateControl::IActivationCallback* _callback;
+            IPluginAsyncStateControl::IRequestCallback* _callback;
             PluginInitializerService& _initializerservice;
             ActivateJobProxyType _activateJob;
             ActivateResultJobProxyType _activateResultJob;
@@ -821,8 +829,10 @@ POP_WARNING()
         string Information() const override;
         
         // IPluginAsyncStateControl methods
-        Core::hresult Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IActivationCallback* const cb) override;
-        Core::hresult AbortActivate(const string& callsign) override;
+        Core::hresult Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IRequestCallback* const cb) override;
+        Core::hresult Deactivate(const string& callsign, IRequestCallback* const cb) override { return Core::ERROR_NONE; }
+
+        Core::hresult AbortRequest(const string& callsign) override;
       
         
         BEGIN_INTERFACE_MAP(PluginInitializerService)
@@ -969,7 +979,7 @@ POP_WARNING()
             _notificationsJob.SetMode(mode);
         }
 
-        bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IActivationCallback* const callback)
+        bool NewPluginStarter(PluginHost::IShell* const requestedPluginShell, const uint8_t maxnumberretries, uint16_t const delay, IPluginAsyncStateControl::IRequestCallback* const callback)
         {
             bool result = true;
             PluginStarter starter(requestedPluginShell, maxnumberretries, delay, callback, *this);

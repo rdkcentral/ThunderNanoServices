@@ -94,7 +94,7 @@ namespace Plugin {
     // note we will not specifically handle the connection from the client and the plugin being closed after we stored the callback.
     // worst case: the connection being closed without abort called but in that case we will call the callback on a dead proxy and then 
     // release it, so no leaks (no need to go through the trouble to handle the dangling proxies here)
-    Core::hresult PluginInitializerService::Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IActivationCallback* const cb)
+    Core::hresult PluginInitializerService::Activate(const string& callsign, const Core::OptionalType<uint8_t>& maxnumberretries, const Core::OptionalType<uint16_t>& delay, IPluginAsyncStateControl::IRequestCallback* const cb)
     {
         TRACE(Trace::Information, (_T("Plugin Activate request received for plugin [%s]"), callsign.c_str()));
 
@@ -126,7 +126,7 @@ namespace Plugin {
                 if (cb != nullptr)
                 {
                     TRACE(Trace::DetailedInfo, (_T("Result callback success called for plugin [%s]"), callsign.c_str()));
-                    cb->Finished(callsign, Exchange::IPluginAsyncStateControl::IActivationCallback::state::SUCCESS, 0);
+                    cb->Finished(callsign, Exchange::IPluginAsyncStateControl::IRequestCallback::state::SUCCESS, 0);
                 }
             } else { // DESTROYED || UNAVAILABLE
                 TRACE(Trace::Error, (_T("Could not start activating plugin [%s] as it is in an illegal state [%s]"), callsign.c_str(), Core::EnumerateType<PluginHost::IShell::state>(state).Data()));
@@ -144,7 +144,7 @@ namespace Plugin {
         return result;
     }
 
-    Core::hresult PluginInitializerService::AbortActivate(const string& callsign)
+    Core::hresult PluginInitializerService::AbortRequest(const string& callsign)
     {
         TRACE(Trace::Information, (_T("Plugin Abort Activate request received for plugin [%s]"), callsign.c_str()));
 
