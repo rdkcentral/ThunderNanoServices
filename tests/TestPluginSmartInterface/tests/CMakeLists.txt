@@ -1,0 +1,39 @@
+set(TARGET PluginSmartInterfaceIntegrationTests)
+
+add_executable(${TARGET}
+    PluginSmartInterfaceTestSuite.cpp
+    Module.cpp)
+
+add_dependencies(${TARGET}
+    ${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}
+    ${TEST_PLUGINSMARTINTERFACE_CONSUMER_TARGET})
+
+target_compile_definitions(${TARGET}
+    PRIVATE
+        MODULE_NAME=PluginSmartInterfaceTestSuite
+        TEST_SMART_PROVIDER_CALLSIGN="TestSmartProvider"
+        TEST_SMART_CONSUMER_CALLSIGN="TestSmartConsumer"
+        TEST_SMART_PROVIDER_CLASSNAME="TestSmartProvider"
+        TEST_SMART_CONSUMER_CLASSNAME="TestSmartConsumer"
+        TEST_SMART_PROVIDER_LOCATOR="$<TARGET_FILE_NAME:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>"
+        TEST_SMART_CONSUMER_LOCATOR="$<TARGET_FILE_NAME:${TEST_PLUGINSMARTINTERFACE_CONSUMER_TARGET}>"
+        TEST_SMART_PLUGIN_PATH="$<TARGET_FILE_DIR:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>")
+
+if(BUILD_REFERENCE)
+    target_compile_definitions(${TARGET} PRIVATE BUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
+target_link_libraries(${TARGET}
+    PRIVATE
+        thunder_test_support::thunder_test_support
+        GTest::gtest
+        GTest::gtest_main)
+
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
+add_test(NAME ${TARGET} COMMAND ${TARGET})
+set_tests_properties(${TARGET} PROPERTIES
+    ENVIRONMENT
+        "LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}:$<TARGET_FILE_DIR:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>:$ENV{LD_LIBRARY_PATH}")
