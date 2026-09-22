@@ -1,4 +1,8 @@
-startmode = "Activated"
-
+startmode = "@PLUGIN_TESTSMARTCONSUMER_STARTMODE@"
+resumed = "@PLUGIN_TESTSMARTCONSUMER_RESUMED@"  
 configuration = JSON()
 configuration.add("providercallsign", "TestSmartProvider")
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTSMARTCONSUMER_MODE@")
+configuration.add("root", root)

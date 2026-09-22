@@ -34,4 +34,10 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${NAMESPACE}_Runtime)
 
+set(PLUGIN_TESTSMARTPROVIDER_STARTMODE "Deactivated" CACHE STRING
+    "Startup mode of the TestSmartProvider plugin")
+
+set(PLUGIN_TESTSMARTPROVIDER_RESUMED false CACHE BOOL
+    "Start TestSmartProvider in resumed state")
+
 write_config()

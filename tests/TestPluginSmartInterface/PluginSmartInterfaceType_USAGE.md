@@ -64,6 +64,19 @@ TestSmartConsumer
 TestSmartProvider
 ```
 
+The Consumer configuration includes:
+
+```text
+root.mode = Local
+```
+
+In Thunder, `Local` runs the plugin out of process. `Off` runs the plugin
+in process; `Container` and `Distributed` select their respective execution
+modes.
+
+Because the Consumer uses `PluginSmartInterfaceType` out of process, the
+Thunder worker pool must have at least two threads to avoid deadlocks.
+
 The expected initial state is:
 
 ```text
@@ -166,9 +179,10 @@ Expected:
 TestSmartProvider -> Activated
 ```
 
-### Add Operation
+### Calculate Operation
 
-When the Provider is active, send:
+When the Provider is active, send one `Calculate` request. The Consumer uses
+the Smart Interface to perform both the addition and subtraction:
 
 ```bash
 curl -s http://127.0.0.1:55555/jsonrpc \
@@ -176,7 +190,7 @@ curl -s http://127.0.0.1:55555/jsonrpc \
   --data '{
     "jsonrpc":"2.0",
     "id":1,
-    "method":"TestSmartConsumer.1.add",
+    "method":"TestSmartConsumer.1.calculate",
     "params":{
       "a":7,
       "b":5
@@ -187,31 +201,7 @@ curl -s http://127.0.0.1:55555/jsonrpc \
 Expected result:
 
 ```text
-12
-```
-
-### Sub Operation
-
-When the Provider is active, send:
-
-```bash
-curl -s http://127.0.0.1:55555/jsonrpc \
-  -H 'Content-Type: application/json' \
-  --data '{
-    "jsonrpc":"2.0",
-    "id":2,
-    "method":"TestSmartConsumer.1.sub",
-    "params":{
-      "a":7,
-      "b":5
-    }
-  }'
-```
-
-Expected result:
-
-```text
-2
+{"addResult":12,"subResult":2}
 ```
 
 ### Deactivate Provider
@@ -274,10 +264,10 @@ TestSmartProvider -> Activated
 After the Provider becomes active again, the Consumer should regain access
 to it.
 
-`Add(7, 5)` should again produce:
+`Calculate(7, 5)` should again produce:
 
 ```text
-12
+{"addResult":12,"subResult":2}
 ```
 
 Allow a short period for the Provider lifecycle change to propagate before
@@ -309,7 +299,7 @@ Consumer operations succeed
 The expected result is:
 
 ```text
-Add(4, 9) -> 13
+Calculate(9, 4) -> addResult=13, subResult=5
 ```
 
 ## Integration Tests
@@ -337,8 +327,7 @@ ctest --test-dir build/ThunderNanoServices   --output-on-failure   -R PluginSmar
 |---|---|
 | Provider inactive | Consumer cannot use Provider |
 | Provider activated | Consumer can use Provider |
-| `Add(7,5)` | `12` |
-| `Sub(7,5)` | `2` |
+| `Calculate(7,5)` | `addResult=12`, `subResult=2` |
 | Provider deactivated | Consumer loses Provider access |
 | Provider reactivated | Consumer regains Provider access |
 | Provider active before Consumer | Consumer discovers Provider |
@@ -352,7 +341,7 @@ QA should verify:
 - Consumer starts in the Activated state.
 - Provider starts in the Deactivated state.
 - Provider activation succeeds.
-- Consumer can use the Provider after activation.
+- Consumer can use the Provider after activation through `Calculate`.
 - Provider deactivation succeeds.
 - Consumer loses access after deactivation.
 - Provider reactivation succeeds.
@@ -402,7 +391,9 @@ logs.
 ### JSON-RPC returns `Unknown method`
 
 An `Unknown method` response means the requested JSON-RPC method is not
-exposed by the current Consumer configuration.
+exposed by the current Consumer configuration. The exposed method is
+`TestSmartConsumer.1.calculate`; there are no separate `.add` or `.sub`
+methods.
 
 This is separate from the Smart Interface lifecycle validation. The
 integration test validates the Smart Interface behavior independently.

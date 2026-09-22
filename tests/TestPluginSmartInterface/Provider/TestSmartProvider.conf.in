@@ -1,1 +1,2 @@
-startmode = "Deactivated"
+startmode = "@PLUGIN_TESTSMARTPROVIDER_STARTMODE@"
+resumed = "@PLUGIN_TESTSMARTPROVIDER_RESUMED@"
