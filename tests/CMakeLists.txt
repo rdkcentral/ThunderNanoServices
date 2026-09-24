@@ -35,6 +35,7 @@ option(PLUGIN_BENCHMARK "Include Benchmark plugin for COM-RPC performance measur
 option(PLUGIN_TESTSTATECONTROL "Include TestStateControl plugin" OFF)
 option(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS "Include TestWholePluginOutOfProcess plugin" OFF)
 option(PLUGIN_TESTPERCALLSIGNREGISTRATION_ISHELL "Include TestPerCallsignRegistrationIShell plugin" OFF)
+option(PLUGIN_TESTPERCALLSIGNREGISTRATION_ICONTROLLER "Include TestPerCallsignRegistrationIController plugin" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -78,4 +79,10 @@ if(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS)
     add_subdirectory(TestWholePluginOutOfProcess)
 endif()
 
-add_subdirectory(TestPerCallsignRegistration)
+if(PLUGIN_TESTPERCALLSIGNREGISTRATION_ISHELL)
+    add_subdirectory(TestPerCallsignRegistration/IShell)
+endif()
+
+if(PLUGIN_TESTPERCALLSIGNREGISTRATION_ICONTROLLER)
+    add_subdirectory(TestPerCallsignRegistration/IController)
+endif()
