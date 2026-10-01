@@ -20,17 +20,11 @@
 /**
  * @file JSONRPCThrottleTestSuite.cpp
  *
- * Stage 1 sanity + concurrency-counter test for the JSONRPCThrottle plugin.
+ * Sanity, concurrency-counter, and HTTP throttle tests for JSONRPCThrottle.
  *
- * IMPORTANT: everything in this file goes through ThunderTestRuntime's
- * in-process JSON-RPC link — a direct dispatcher path. It does NOT exercise
- * Thunder's channel_throttle / plugin-throttle queue, which only sits in
- * front of the real HTTP/WebSocket transport. The "concurrency" tests below
- * verify the PLUGIN's own atomic counters behave correctly under genuine
- * OS-thread concurrency (multiple std::threads hitting the plugin at once);
- * they say nothing about whether Thunder would have queued or rejected any
- * of those calls. Actual throttle verification is Stage 2 (external
- * HTTP/WebSocket bombardment client).
+ * Most tests use ThunderTestRuntime's in-process JSON-RPC link and bypass the
+ * transport throttle queues. HTTPThrottleFour uses real HTTP connections and
+ * verifies the per-plugin throttle through the production dispatch path.
  */
 
 #include "Module.h"
@@ -81,7 +75,7 @@ namespace {
     }
 
     constexpr uint16_t HTTP_PORT = 19091;
-    constexpr uint8_t CHANNEL_THROTTLE = 2;
+    constexpr uint8_t CHANNEL_THROTTLE = 8;
     constexpr uint8_t PLUGIN_THROTTLE = 4;
 
 } // namespace
@@ -534,10 +528,9 @@ TEST_F(JSONRPCThrottleTest, HTTPThrottleFour)
     EXPECT_EQ(totalCalls, 20);
     EXPECT_EQ(activeCalls, 0);
 
-    // This is the important assertion.
-    EXPECT_LE(
+    EXPECT_EQ(
         maximumConcurrentCalls,
-        4);
+        PLUGIN_THROTTLE);
 
     // 20 requests / 4 slots = 5 batches.
     // Each request takes 2 seconds.

@@ -20,8 +20,9 @@ cmake -S "$ROOT/Thunder" -B "$ROOT/build/Thunder-throttle-test" -G Ninja \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
     -DBUILD_TESTS=ON \
-    -DENABLE_TEST_RUNTIME=ON
-cmake --build "$ROOT/build/Thunder-throttle-test"
+    -DENABLE_TEST_RUNTIME=ON \
+    -DTEST_RUNTIME_THREADPOOL_COUNT=8
+cmake --build "$ROOT/build/Thunder-throttle-test" -j"$(nproc)"
 cmake --install "$ROOT/build/Thunder-throttle-test"
 
 cmake -S "$ROOT/ThunderNanoServices" \
@@ -31,11 +32,13 @@ cmake -S "$ROOT/ThunderNanoServices" \
     -DCMAKE_PREFIX_PATH="$PREFIX" \
     -DPLUGIN_JSONRPCTHROTTLE=ON \
     -DJSONRPCTHROTTLE_TESTS=ON
-cmake --build "$ROOT/build/ThunderNanoServices-throttle-test"
+cmake --build "$ROOT/build/ThunderNanoServices-throttle-test" -j"$(nproc)"
+cmake --install "$ROOT/build/ThunderNanoServices-throttle-test"
 
-ctest --test-dir "$ROOT/build/ThunderNanoServices-throttle-test" \
-    -R '^JSONRPCThrottleTest$' \
-    --output-on-failure -V
+cd "$ROOT/build/ThunderNanoServices-throttle-test/tests/JSONRPCThrottle/tests"
+LD_LIBRARY_PATH="$PREFIX/lib:$ROOT/build/ThunderNanoServices-throttle-test/tests/JSONRPCThrottle" \
+    ./JSONRPCThrottleTest
+cd "$ROOT"
 ```
 
 Run the commands from the workspace root, which contains `Thunder` and
@@ -43,10 +46,12 @@ Run the commands from the workspace root, which contains `Thunder` and
 ThunderNanoServices. The test is skipped at configure time if either GTest or
 the installed `thunder_test_support` package cannot be found.
 
-The `HTTPThrottleFour` case is the end-to-end throttle proof. It configures:
+The `HTTPThrottleFour` case exercises the production HTTP dispatch path. It
+configures:
 
 - plugin throttle: 4 requests
-- channel throttle: 2 requests per connection
+- channel throttle: 8 requests per connection
+- test-runtime worker threads: 8
 - workload: 20 concurrent HTTP requests, each delayed for 2 seconds
 
 Each request uses a separate connection, so the plugin throttle is the limit
@@ -54,33 +59,12 @@ exercised by this test. A successful run reports all tests passed and satisfies:
 
 - `totalCalls == 20`
 - `activeCalls == 0` after all clients complete
-- `maximumConcurrentCalls <= 4`
+- `maximumConcurrentCalls == 4`
 - elapsed time is at least 7 seconds
 
-Without throttling, the 20 requests can overlap and finish in approximately 2
-seconds. With four plugin slots, they execute in approximately five batches and
-normally take about 10 seconds.
-
-### Inspect the throttle instrumentation
-
-Run CTest with `-V`, as shown above, to display Thunder and plugin diagnostics.
-The relevant messages are:
-
-```text
-[PLUGIN-THROTTLE] EXECUTE used=4 slots=4
-[PLUGIN-THROTTLE] QUEUE used=4 slots=4
-[PLUGIN] ACTIVE=4 MAX=4 thread=...
-[PLUGIN-THROTTLE] POP used=4 slots=4
-```
-
-`QUEUE` while `used=4 slots=4` shows that Thunder held excess work before it
-entered the plugin. The plugin's `MAX=4` observation independently confirms
-that no more than four delayed methods ran concurrently.
-
-The temporary framework instrumentation labels a queue as
-`PLUGIN-THROTTLE` when its slot count is exactly 4 and as `CHANNEL-THROTTLE`
-otherwise. Treat the label as test-specific: `used` and `slots`, together with
-the plugin statistics, are the reliable evidence.
+With four plugin slots, the requests execute in approximately five batches and
+normally take about 10 seconds. The test requires
+`maximumConcurrentCalls == 4`, not merely a value below the limit.
 
 ### Run manually over HTTP
 
@@ -98,29 +82,58 @@ After installing Thunder and the plugin, set an explicit plugin limit in
 
 The generated plugin configuration does not currently add `throttle` itself.
 If it is omitted, the plugin inherits the top-level Thunder `throttle` value.
-A value of `0` means unlimited concurrency. The top-level
-`channel_throttle` setting separately limits concurrent requests on each
-client connection.
+A value of `0` means unlimited concurrency.
 
-Start Thunder with the installed configuration and library paths appropriate
-for the local installation. With the default HTTP endpoint on port 55555,
-reset the counters and submit concurrent work:
+Merge the following settings into `$PREFIX/etc/Thunder/config.json`:
+
+```json
+{
+    "channel_throttle": 8,
+    "process": {
+        "threadpoolcount": 8
+    }
+}
+```
+
+The daemon needs more worker threads than the plugin throttle because it also
+uses workers for request processing. With only four workers, the observed
+plugin concurrency may stop at three. Confirm that startup reports
+`created threads=8` before running the manual test.
+
+Start Thunder in one terminal:
 
 ```bash
-ENDPOINT=http://127.0.0.1:55555/jsonrpc
+LD_LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib/thunder:$PREFIX/lib/thunder/plugins" \
+    "$PREFIX/bin/Thunder" -f -c "$PREFIX/etc/Thunder/config.json"
+```
 
+The commands below use the plugin-specific endpoint. The generic `/jsonrpc`
+endpoint routes through the Controller throttle and must not be used for this
+test.
+
+Reset the counters:
+
+```bash
 curl -sS -H 'Content-Type: application/json' \
-    -d '{"jsonrpc":"2.0","id":1,"method":"JSONRPCThrottle.1.reset"}' \
-    "$ENDPOINT"
+    --data '{"jsonrpc":"2.0","id":1,"method":"reset"}' \
+    http://127.0.0.1:55555/jsonrpc/JSONRPCThrottle
+```
 
+Send 20 concurrent requests, each delayed for 2 seconds:
+
+```bash
 seq 20 | xargs -P 20 -I '{}' curl -sS \
     -H 'Content-Type: application/json' \
-    -d '{"jsonrpc":"2.0","id":{},"method":"JSONRPCThrottle.1.delay","params":{"milliseconds":2000}}' \
-    "$ENDPOINT"
+    --data '{"jsonrpc":"2.0","id":{},"method":"delay","params":{"milliseconds":2000}}' \
+    http://127.0.0.1:55555/jsonrpc/JSONRPCThrottle
+```
 
+Read the result:
+
+```bash
 curl -sS -H 'Content-Type: application/json' \
-    -d '{"jsonrpc":"2.0","id":22,"method":"JSONRPCThrottle.1.statistics"}' \
-    "$ENDPOINT"
+    --data '{"jsonrpc":"2.0","id":22,"method":"statistics"}' \
+    http://127.0.0.1:55555/jsonrpc/JSONRPCThrottle
 ```
 
 The final response should contain values equivalent to:
@@ -133,8 +146,9 @@ The final response should contain values equivalent to:
 }
 ```
 
-The maximum may be lower if the client or worker pool does not produce enough
-overlap, but it must not exceed the configured plugin throttle.
+With the documented worker, channel, plugin, and client settings,
+`maximumConcurrentCalls` should equal `4`. A lower value means another resource
+is limiting execution first.
 
 ### JSON-RPC methods
 
