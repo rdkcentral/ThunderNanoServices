@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME TestPerCallsignRegistrationIShell_TestSuite
+#define MODULE_NAME TestPerCallsignRegistration
 #endif
 
 #include <plugins/plugins.h>
