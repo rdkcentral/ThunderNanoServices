@@ -5,6 +5,11 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      thunder_nano_services_ref:
+        required: false
+        type: string
+        default: R5_3
 
 jobs:
   ThunderNanoServices:
@@ -80,6 +85,7 @@ jobs:
       with:
         path: ThunderNanoServices
         repository: ${{github.repository_owner}}/ThunderNanoServices
+        ref: ${{ inputs.thunder_nano_services_ref }}
 
     - name: Regex ThunderNanoServices
       if: contains(github.event.pull_request.body, '[Options:')
