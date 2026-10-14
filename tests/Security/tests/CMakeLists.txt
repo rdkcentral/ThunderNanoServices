@@ -84,7 +84,6 @@ endif()
 
 target_link_libraries(${TARGET}
     PRIVATE
-        ${QASECURITYAGENT_MODULE_NAME}
         thunder_test_support::thunder_test_support
         GTest::gtest
         GTest::gtest_main
