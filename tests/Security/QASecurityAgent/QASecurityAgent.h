@@ -91,9 +91,6 @@ public:
     PluginHost::ISecurity* Officer(
         const string& token) override;
 
-    static void SetPolicy(
-        const QASecurityContext::Policy& policy);
-
 private:
     static bool DecodeToken(
         const string& token,
@@ -102,8 +99,6 @@ private:
     static bool EncodeToken(
         const TokenPolicy policy,
         string& token);
-
-    static QASecurityContext::Policy _policy;
 
     Core::Sink<Notification> _notification;
 };

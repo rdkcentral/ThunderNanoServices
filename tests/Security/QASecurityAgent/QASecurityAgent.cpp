@@ -59,14 +59,6 @@ static Metadata<QASecurityAgent> metadata(
 
 } // namespace
 
-QASecurityContext::Policy QASecurityAgent::_policy;
-
-void QASecurityAgent::SetPolicy(
-    const QASecurityContext::Policy& policy)
-{
-    _policy = policy;
-}
-
 const string QASecurityAgent::Initialize(
     PluginHost::IShell* service)
 {

@@ -146,17 +146,52 @@ private:
 public:
     SecurityWebSocketClient(const string& path, const string& query, const Core::NodeId& remoteNode)
         : ClientFactoryBase(5)
-        , BaseClass(5, _objectFactory, path, _T("jsonrpc"), query, _T(""), false, true, false,
+        , BaseClass(5, _objectFactory, path, _T(""), query, _T(""), false, true, false,
               remoteNode.AnyInterface(), remoteNode, 1024, 1024)
+        , _responseReceived(false, false)
     {
     }
 
     ~SecurityWebSocketClient() override = default;
 
-    void Received(Core::ProxyType<Core::JSON::IElement>&) { }
+    void Received(Core::ProxyType<Core::JSON::IElement>& element) override
+    {
+        Core::ProxyType<Core::JSONRPC::Message> message(element);
+        if (message.IsValid() && message->JSONRPC.IsSet()) {
+            message->ToString(_response);
+            _responseReceived.Unlock();
+        }
+    }
+
     void Send(Core::ProxyType<Core::JSON::IElement>&) { }
     void StateChange() override { }
     bool IsIdle() const override { return true; }
+
+    void SendEcho()
+    {
+        Core::ProxyType<Core::JSONRPC::Message> message =
+            Core::ProxyType<Core::JSONRPC::Message>::Create();
+        message->JSONRPC = Core::JSONRPC::Message::DefaultVersion;
+        message->Id = 1;
+        message->Designator = _T("QASecurityTarget.1.echo");
+        message->Parameters = _T("{}");
+
+        BaseClass::Submit(Core::ProxyType<Core::JSON::IElement>(message));
+    }
+
+    bool WaitForResponse(const uint32_t timeoutMs)
+    {
+        return (_responseReceived.Lock(timeoutMs) == Core::ERROR_NONE);
+    }
+
+    const string& Response() const
+    {
+        return (_response);
+    }
+
+private:
+    string _response;
+    Core::Event _responseReceived;
 };
 
 /*
@@ -493,6 +528,43 @@ TEST_F(QASecurityAgentTest, WebSocketPathDenied)
     EXPECT_NE(result, Core::ERROR_NONE);
     EXPECT_FALSE(client.IsOpen());
     EXPECT_EQ(client.Close(1000), Core::ERROR_NONE);
+}
+
+TEST_F(QASecurityAgentTest, WebSocketJSONRPCAllowed)
+{
+    SecurityWebSocketClient client(
+        "/jsonrpc/QASecurityTarget",
+        "token=ALL_ALLOW",
+        Core::NodeId("127.0.0.1", SECURITY_TEST_PORT));
+
+    ASSERT_EQ(client.Open(5000), Core::ERROR_NONE);
+    ASSERT_TRUE(client.IsOpen());
+
+    client.SendEcho();
+
+    ASSERT_TRUE(client.WaitForResponse(5000));
+    EXPECT_NE(client.Response().find("\"result\":null"), string::npos);
+    EXPECT_EQ(client.Response().find("\"error\":"), string::npos);
+    EXPECT_EQ(client.Close(5000), Core::ERROR_NONE);
+}
+
+TEST_F(QASecurityAgentTest, WebSocketJSONRPCDenied)
+{
+    SecurityWebSocketClient client(
+        "/jsonrpc/QASecurityTarget",
+        "token=PATH_ALLOW",
+        Core::NodeId("127.0.0.1", SECURITY_TEST_PORT));
+
+    ASSERT_EQ(client.Open(5000), Core::ERROR_NONE);
+    ASSERT_TRUE(client.IsOpen());
+
+    client.SendEcho();
+
+    ASSERT_TRUE(client.WaitForResponse(5000));
+    EXPECT_NE(client.Response().find("\"error\":"), string::npos);
+    EXPECT_NE(client.Response().find("-32604"), string::npos);
+    EXPECT_EQ(client.Response().find("\"result\":"), string::npos);
+    EXPECT_EQ(client.Close(5000), Core::ERROR_NONE);
 }
 
 /*
