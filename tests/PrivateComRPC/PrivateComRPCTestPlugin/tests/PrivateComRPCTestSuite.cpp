@@ -72,6 +72,7 @@ namespace Tests {
             cfg.Locator = PRIVATECOMRPCTEST_TEST_LOCATOR;
             cfg.Resumed = false;
             cfg.Root.Mode = Plugin::Config::RootConfig::ModeType::LOCAL;
+            cfg.Communicator.Null(true);
 
             const uint32_t result = _runtime.Initialize({ cfg }, PRIVATECOMRPCTEST_TEST_PLUGIN_PATH);
 
@@ -109,7 +110,7 @@ namespace Tests {
         EXPECT_NE(_privateComRPC, nullptr);
     }
 
-    TEST_F(PrivateComRPCTestSuite, SmallPayloadIsProcessed)
+    TEST_F(PrivateComRPCTestSuite, PrivateCommunicatorProcessesSmallPayload)
     {
         const string payload(_T("0123456789ABCDEF"));
 
@@ -117,7 +118,7 @@ namespace Tests {
 
         const Core::hresult result = _privateComRPC->ProcessLargeData(payload, 0, true, response);
 
-        EXPECT_EQ(result, Core::ERROR_NONE);
+        EXPECT_EQ(result, Core::ERROR_NONE) << "Private COM-RPC call must succeed over the plugin communicator";
         EXPECT_EQ(response, payload);
     }
 

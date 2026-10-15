@@ -486,7 +486,7 @@ The relevant configuration uses:
 cfg.Root.Mode = Plugin::Config::RootConfig::ModeType::LOCAL;
 ```
 
-The server communicator endpoint is `/tmp/privatecomrpctest`. The CMake cache variable `PLUGIN_PRIVATECOMRPCTEST_COMMUNICATOR` is exposed for configuration but is not substituted into the current template.
+The server communicator endpoint defaults to `/tmp/privatecomrpctest` and is configurable with `-DPLUGIN_PRIVATECOMRPCTEST_COMMUNICATOR=<endpoint>` during CMake configuration.
 
 ---
 
