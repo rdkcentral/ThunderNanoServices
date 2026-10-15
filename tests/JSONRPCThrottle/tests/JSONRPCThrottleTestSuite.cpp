@@ -41,9 +41,11 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cerrno>
 #include <cstring>
 
 namespace Thunder {
@@ -77,6 +79,8 @@ namespace {
     constexpr uint16_t HTTP_PORT = 19091;
     constexpr uint8_t CHANNEL_THROTTLE = 8;
     constexpr uint8_t PLUGIN_THROTTLE = 4;
+    // Five 2 s batches are expected; the remainder is scheduling margin.
+    constexpr std::chrono::milliseconds REQUEST_TIMEOUT { 30000 };
 
 } // namespace
 
@@ -196,6 +200,11 @@ protected:
 
         ASSERT_GE(socketFd, 0);
 
+        struct SocketCloser {
+            int fd;
+            ~SocketCloser() { close(fd); }
+        } closer { socketFd };
+
         sockaddr_in address {};
         address.sin_family = AF_INET;
         address.sin_port = htons(HTTP_PORT);
@@ -258,27 +267,41 @@ protected:
             sent += static_cast<size_t>(result);
         }
 
+        const auto deadline = std::chrono::steady_clock::now() + REQUEST_TIMEOUT;
         char buffer[4096];
+        size_t receivedTotal = 0;
 
         while (true) {
-            const ssize_t received =
-                recv(
-                    socketFd,
-                    buffer,
-                    sizeof(buffer),
-                    0);
+            const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+                deadline - std::chrono::steady_clock::now()).count();
+            ASSERT_GT(remaining, 0) << "Timed out waiting for delay response";
 
-            if (received <= 0) {
+            pollfd descriptor { socketFd, POLLIN, 0 };
+            const int ready = poll(&descriptor, 1, static_cast<int>(remaining));
+            if ((ready < 0) && (errno == EINTR)) {
+                continue;
+            }
+            ASSERT_GE(ready, 0) << "poll() failed: " << std::strerror(errno);
+            ASSERT_GT(ready, 0) << "Timed out waiting for delay response";
+
+            const ssize_t received = recv(socketFd, buffer, sizeof(buffer), 0);
+            if (received == 0) {
                 break;
             }
+            if ((received < 0) && (errno == EINTR)) {
+                continue;
+            }
+            ASSERT_GT(received, 0) << "recv() failed: " << std::strerror(errno);
+
+            receivedTotal += static_cast<size_t>(received);
         }
+
+        ASSERT_GT(receivedTotal, 0u) << "Connection closed without a response";
 
         std::cout
                 << "[HTTP] thread=" << std::this_thread::get_id()
                 << " RESPONSE received"
                 << std::endl;
-
-        close(socketFd);
     }
 
     void SendConcurrentDelayRequests(
@@ -431,11 +454,12 @@ TEST_F(JSONRPCThrottleTest, ConcurrentDelayCallsAreCountedCorrectly)
     for (int i = 0; i < kThreadCount; ++i) {
         workers.emplace_back([this, i, &ready, &go, &results]() {
             auto link = _runtime.CreateJSONRPCLink(JSONRPCTHROTTLE_TEST_CALLSIGN);
+
+            ++ready;
             if (!link.IsValid()) {
                 return;
             }
 
-            ++ready;
             while (!go.load()) {
                 std::this_thread::yield();
             }
