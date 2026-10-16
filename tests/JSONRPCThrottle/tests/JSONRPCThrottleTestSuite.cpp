@@ -82,6 +82,24 @@ namespace {
     // Five 2 s batches are expected; the remainder is scheduling margin.
     constexpr std::chrono::milliseconds REQUEST_TIMEOUT { 30000 };
 
+    class StatisticsResponse : public Core::JSON::Container {
+    public:
+        StatisticsResponse()
+            : Core::JSON::Container()
+            , TotalCalls(0)
+            , ActiveCalls(0)
+            , MaximumConcurrentCalls(0)
+        {
+            Add(_T("totalCalls"), &TotalCalls);
+            Add(_T("activeCalls"), &ActiveCalls);
+            Add(_T("maximumConcurrentCalls"), &MaximumConcurrentCalls);
+        }
+
+        Core::JSON::DecUInt64 TotalCalls;
+        Core::JSON::DecUInt64 ActiveCalls;
+        Core::JSON::DecUInt64 MaximumConcurrentCalls;
+    };
+
 } // namespace
 
 class JSONRPCThrottleTest : public ::testing::Test {
@@ -161,31 +179,14 @@ protected:
             return result;
         }
 
-        Core::JSON::Container statistics;
-
-        Core::JSON::DecUInt64 total;
-        Core::JSON::DecUInt64 active;
-        Core::JSON::DecUInt64 maximum;
-
-        statistics.Add(
-            _T("totalCalls"),
-            &total);
-
-        statistics.Add(
-            _T("activeCalls"),
-            &active);
-
-        statistics.Add(
-            _T("maximumConcurrentCalls"),
-            &maximum);
-
+        StatisticsResponse statistics;
         if (!statistics.FromString(response)) {
             return Core::ERROR_GENERAL;
         }
 
-        totalCalls = total.Value();
-        activeCalls = active.Value();
-        maximumConcurrentCalls = maximum.Value();
+        totalCalls = statistics.TotalCalls.Value();
+        activeCalls = statistics.ActiveCalls.Value();
+        maximumConcurrentCalls = statistics.MaximumConcurrentCalls.Value();
 
         return Core::ERROR_NONE;
     }
