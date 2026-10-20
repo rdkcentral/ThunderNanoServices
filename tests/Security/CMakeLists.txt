@@ -22,4 +22,5 @@ project(SecurityTestSuite)
 
 add_subdirectory(QASecurityAgent)
 add_subdirectory(QASecurityTarget)
+add_subdirectory(QASecurityTargetAlt)
 add_subdirectory(tests)
