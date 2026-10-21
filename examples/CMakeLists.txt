@@ -28,6 +28,10 @@ option(EXAMPLE_COMRPCCLIENT "Include COMRPCClient example" OFF)
 option(PLUGIN_JSONRPC "Include JSONRPCExamplePlugin plugin" OFF)
 option(PLUGIN_FILETRANSFER "Include FileTransfer plugin" OFF)
 option(PLUGIN_OUTOFPROCESS "Include OutOfProcess plugin" OFF)
+option(PLUGIN_CALCULATOR "Include the OpenTelemetry Calculator plugin" OFF)
+option(PLUGIN_CALCULATORPROXY "Include the OpenTelemetry Calculator proxy plugin" OFF)
+option(EXAMPLE_CALCULATORCLIENTCOMRPC "Include the OpenTelemetry Calculator COM-RPC client" OFF)
+option(EXAMPLE_CALCULATORCLIENTJSONRPC "Include the OpenTelemetry Calculator JSON-RPC client" OFF)
 option(PLUGIN_STATECONTROLLER "Include StateController plugin" OFF)
 option(PLUGIN_CONFIGUPDATEEXAMPLE "Include Sample plugin to get/set plugins config" OFF)
 option(EXAMPLE_CLIENT_SERVER "Include Client Server Echo test suite" OFF)
@@ -55,6 +59,22 @@ endif()
 
 if(PLUGIN_OUTOFPROCESS)
     add_subdirectory(OutOfProcessPlugin)
+endif()
+
+if(PLUGIN_CALCULATOR OR PLUGIN_CALCULATORPROXY)
+    add_subdirectory(ThunderOpenTelemetry/Calculator)
+endif()
+
+if(PLUGIN_CALCULATORPROXY)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorProxy)
+endif()
+
+if(EXAMPLE_CALCULATORCLIENTCOMRPC)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientCOMRPC)
+endif()
+
+if(EXAMPLE_CALCULATORCLIENTJSONRPC)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientJSONRPC)
 endif()
 
 if(PLUGIN_STATECONTROLLER)
