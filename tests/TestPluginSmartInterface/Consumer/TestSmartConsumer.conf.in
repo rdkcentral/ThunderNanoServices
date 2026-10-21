@@ -5,4 +5,5 @@ configuration.add("providercallsign", "TestSmartProvider")
 
 root = JSON()
 root.add("mode", "@PLUGIN_TESTSMARTCONSUMER_MODE@")
+root.add("threads", 2)
 configuration.add("root", root)
