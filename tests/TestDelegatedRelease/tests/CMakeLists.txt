@@ -37,8 +37,8 @@ endif()
 target_link_libraries(${TARGET}
     PRIVATE
         thunder_test_support::thunder_test_support
-        GTest::gtest
-        GTest::gtest_main
+        GTest::GTest
+        GTest::Main
 )
 
 set_target_properties(${TARGET} PROPERTIES
