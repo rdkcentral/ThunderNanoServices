@@ -97,6 +97,25 @@ bool WaitForControllerCount(
             (count >= expected));
 }
 
+bool WaitForControllerNotification(
+    QualityAssurance::IPerCallsignRegistrationTest& observer,
+    const string& expected)
+{
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    string notification;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        if ((observer.LastControllerNotification(notification) == Core::ERROR_NONE) &&
+            (notification == expected)) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    return ((observer.LastControllerNotification(notification) == Core::ERROR_NONE) &&
+            (notification == expected));
+}
+
 } // namespace
 
 class PerCallsignRegistrationTest : public ::testing::Test {
@@ -144,8 +163,22 @@ protected:
             _runtime.QueryInterfaceByCallsign<PluginHost::IStateControl>(StateControlBCallsign);
         ASSERT_NE(stateControlA, nullptr);
         ASSERT_NE(stateControlB, nullptr);
+
+        const Core::OptionalType<string> stateControlASelection(StateControlACallsign);
+        const Core::OptionalType<string> stateControlBSelection(StateControlBCallsign);
+        ASSERT_EQ(_observer->ClearControllerNotifications(), Core::ERROR_NONE);
+        ASSERT_EQ(_observer->MonitorController(stateControlASelection), Core::ERROR_NONE);
         ASSERT_TRUE(EnsureResumed(*stateControlA));
+        ASSERT_TRUE(WaitForControllerNotification(
+            *_observer, _T("StateControlStateChange:StateControlA:RESUMED")));
+        ASSERT_EQ(_observer->StopMonitoringController(stateControlASelection), Core::ERROR_NONE);
+
+        ASSERT_EQ(_observer->MonitorController(stateControlBSelection), Core::ERROR_NONE);
         ASSERT_TRUE(EnsureResumed(*stateControlB));
+        ASSERT_TRUE(WaitForControllerNotification(
+            *_observer, _T("StateControlStateChange:StateControlB:RESUMED")));
+        ASSERT_EQ(_observer->StopMonitoringController(stateControlBSelection), Core::ERROR_NONE);
+
         stateControlA->Release();
         stateControlB->Release();
 

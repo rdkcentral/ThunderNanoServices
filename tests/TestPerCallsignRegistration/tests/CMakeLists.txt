@@ -25,11 +25,13 @@ add_executable(${TARGET}
 
 add_dependencies(${TARGET} ${MODULE_NAME} ${NAMESPACE}TestStateControl)
 
-add_custom_command(TARGET ${TARGET} POST_BUILD
+add_custom_target(${TARGET}StateControlPlugin
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:${NAMESPACE}TestStateControl>"
         "$<TARGET_FILE_DIR:${MODULE_NAME}>"
 )
+add_dependencies(${TARGET}StateControlPlugin ${NAMESPACE}TestStateControl)
+add_dependencies(${TARGET} ${TARGET}StateControlPlugin)
 
 target_compile_definitions(${TARGET}
     PRIVATE

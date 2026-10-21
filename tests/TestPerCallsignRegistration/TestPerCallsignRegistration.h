@@ -71,6 +71,8 @@ private:
 private:
     PluginHost::IShell* _service;
     Exchange::Controller::ILifeTime* _controller;
+    // Serializes list updates with backend (Un)Register; never taken from notification callbacks.
+    Core::CriticalSection _registrationLock;
     mutable Core::CriticalSection _adminLock;
     std::list<Core::OptionalType<string>> _shellCallsigns;
     std::list<Core::OptionalType<string>> _controllerCallsigns;

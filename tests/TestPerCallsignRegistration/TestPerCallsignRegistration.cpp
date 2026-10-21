@@ -66,6 +66,8 @@ void TestPerCallsignRegistration::Deinitialize(PluginHost::IShell* service)
 
     QualityAssurance::JPerCallsignRegistrationTest::Unregister(*this);
 
+    _registrationLock.Lock();
+
     _adminLock.Lock();
     std::list<Core::OptionalType<string>> shellCallsigns;
     std::list<Core::OptionalType<string>> controllerCallsigns;
@@ -79,6 +81,8 @@ void TestPerCallsignRegistration::Deinitialize(PluginHost::IShell* service)
     for (const auto& callsign : controllerCallsigns) {
         _controller->Unregister(this, callsign);
     }
+
+    _registrationLock.Unlock();
 
     _controller->Release();
     _controller = nullptr;
@@ -129,6 +133,8 @@ Core::hresult TestPerCallsignRegistration::MonitorShell(
     ASSERT(_service != nullptr);
     const Core::OptionalType<string> selection = NormalizeCallsign(callsign);
 
+    Core::SafeSyncType<Core::CriticalSection> registration(_registrationLock);
+
     _adminLock.Lock();
     for (const auto& current : _shellCallsigns) {
         if (current == selection) {
@@ -148,6 +154,8 @@ Core::hresult TestPerCallsignRegistration::StopMonitoringShell(
 {
     ASSERT(_service != nullptr);
     const Core::OptionalType<string> selection = NormalizeCallsign(callsign);
+
+    Core::SafeSyncType<Core::CriticalSection> registration(_registrationLock);
 
     _adminLock.Lock();
     for (auto index = _shellCallsigns.begin(); index != _shellCallsigns.end(); ++index) {
@@ -193,6 +201,8 @@ Core::hresult TestPerCallsignRegistration::MonitorController(
     ASSERT(_controller != nullptr);
     const Core::OptionalType<string> selection = NormalizeCallsign(callsign);
 
+    Core::SafeSyncType<Core::CriticalSection> registration(_registrationLock);
+
     _adminLock.Lock();
     for (const auto& current : _controllerCallsigns) {
         if (current == selection) {
@@ -222,6 +232,8 @@ Core::hresult TestPerCallsignRegistration::StopMonitoringController(
 {
     ASSERT(_controller != nullptr);
     const Core::OptionalType<string> selection = NormalizeCallsign(callsign);
+
+    Core::SafeSyncType<Core::CriticalSection> registration(_registrationLock);
 
     _adminLock.Lock();
     for (auto index = _controllerCallsigns.begin(); index != _controllerCallsigns.end(); ++index) {
