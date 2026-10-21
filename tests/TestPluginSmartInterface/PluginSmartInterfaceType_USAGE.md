@@ -15,7 +15,7 @@ Build the component:
 ```bash
 cmake -G Ninja -S ThunderNanoServices -B build/ThunderNanoServices \
   -DCMAKE_INSTALL_PREFIX="$PWD/install" \
-  -DPLUGIN_TESTSMARTINTERFACE=ON \
+  -DPLUGIN_TESTPLUGINSMARTINTERFACE=ON \
   -DTESTPLUGINSMARTINTERFACE_TESTS=ON
 
 cmake --build build/ThunderNanoServices --target install -j"$(nproc)"
@@ -31,9 +31,9 @@ ctest --test-dir build/ThunderNanoServices --output-on-failure \
 Expected:
 
 ```text
-[==========] Running 6 tests from 2 test suites.
+[==========] Running 7 tests from 3 test suites.
 ...
-[  PASSED  ] 6 tests.
+[  PASSED  ] 7 tests.
 ```
 
 ## Run The Daemon
@@ -113,7 +113,9 @@ Consumer can use Provider again
 ```
 
 The test also verifies the case where the Provider is already active before
-the Consumer starts.
+the Consumer starts. A separate `LOCAL`-mode test runs the Consumer out of
+process and verifies that provider activation, deactivation, and reactivation
+are observed across the process boundary.
 
 ## Provider Lifecycle
 
@@ -304,7 +306,7 @@ Calculate(9, 4) -> addResult=13, subResult=5
 
 ## Integration Tests
 
-The integration test contains six scenarios:
+The integration test contains seven scenarios:
 
 | Test | Expected behavior |
 |---|---|
@@ -314,6 +316,7 @@ The integration test contains six scenarios:
 | `ConsumerReacquiresInterfaceAfterProviderReactivation` | Consumer regains Provider access after reactivation. |
 | `RepeatedProviderLifecycleDoesNotLeaveAStaleInterface` | Repeated Provider lifecycle changes do not leave stale access. |
 | `ProviderAlreadyActiveFixture.ConsumerFindsProviderThatWasAlreadyActive` | Consumer finds a Provider that was active before Consumer startup. |
+| `OutOfProcessConsumerLifecycle.ConsumerTracksProviderLifecycleAcrossProcessBoundary` | A `LOCAL`-mode Consumer acquires and drops the Provider interface across activation transitions. |
 
 Run the integration test directly:
 
@@ -348,7 +351,7 @@ QA should verify:
 - Consumer regains access after reactivation.
 - Repeated activation/deactivation does not leave stale access.
 - Consumer can discover a Provider that was already active before Consumer startup.
-- The integration test completes with all six tests passing.
+- The integration test completes with all seven tests passing, including the `LOCAL`-mode process-boundary scenario.
 
 ## Troubleshooting
 

@@ -52,13 +52,17 @@ namespace Tests {
             return cfg;
         }
 
-        static ThunderTestRuntime::PluginConfig ConsumerConfig(const Plugin::Configuration::startmode startMode = Plugin::Configuration::startmode::ACTIVATED)
+        static ThunderTestRuntime::PluginConfig ConsumerConfig(
+            const Plugin::Configuration::startmode startMode = Plugin::Configuration::startmode::ACTIVATED,
+            const Plugin::Config::RootConfig::ModeType mode = Plugin::Config::RootConfig::ModeType::OFF)
         {
             ThunderTestRuntime::PluginConfig cfg;
             cfg.Callsign = TEST_SMART_CONSUMER_CALLSIGN;
             cfg.ClassName = TEST_SMART_CONSUMER_CLASSNAME;
             cfg.Locator = TEST_SMART_CONSUMER_LOCATOR;
             cfg.StartMode = startMode;
+            cfg.Root.Mode = mode;
+            cfg.Root.Threads = (mode == Plugin::Config::RootConfig::ModeType::LOCAL ? 2 : 1);
             return cfg;
         }
 
@@ -287,6 +291,69 @@ namespace Tests {
 
         EXPECT_EQ(addResult, 13);
         EXPECT_EQ(subResult, 5);
+    }
+
+    class OutOfProcessConsumerLifecycle : public ::testing::Test {
+    protected:
+        ThunderTestRuntime _runtime;
+        QualityAssurance::ISmartConsumer* _consumer { nullptr };
+        Core::ProxyType<PluginHost::IShell> _providerShell;
+
+        void SetUp() override
+        {
+            const uint32_t result = _runtime.Initialize(
+                {
+                    ProviderConfig(Plugin::Configuration::startmode::DEACTIVATED),
+                    ConsumerConfig(
+                        Plugin::Configuration::startmode::ACTIVATED,
+                        Plugin::Config::RootConfig::ModeType::LOCAL)
+                },
+                TEST_SMART_PLUGIN_PATH,
+                TEST_SMART_PROXY_STUB_PATH);
+
+            ASSERT_EQ(result, Core::ERROR_NONE)
+                << "ThunderTestRuntime failed to initialise out-of-process plugins";
+
+            _consumer = _runtime.QueryInterfaceByCallsign<QualityAssurance::ISmartConsumer>(TEST_SMART_CONSUMER_CALLSIGN);
+            ASSERT_NE(_consumer, nullptr)
+                << "The out-of-process consumer must expose ISmartConsumer";
+
+            _providerShell = _runtime.GetShell(TEST_SMART_PROVIDER_CALLSIGN);
+            ASSERT_TRUE(_providerShell.IsValid());
+        }
+
+        void TearDown() override
+        {
+            if (_consumer != nullptr) {
+                _consumer->Release();
+                _consumer = nullptr;
+            }
+
+            _providerShell.Release();
+            _runtime.Deinitialize();
+        }
+    };
+
+    TEST_F(OutOfProcessConsumerLifecycle, ConsumerTracksProviderLifecycleAcrossProcessBoundary)
+    {
+        ASSERT_TRUE(WaitUntil([this] {
+            return CalculateReturns(_consumer, Core::ERROR_UNAVAILABLE);
+        })) << "Out-of-process consumer unexpectedly acquired an inactive provider";
+
+        ASSERT_EQ(_providerShell->Activate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
+        ASSERT_TRUE(WaitUntil([this] {
+            return CalculateReturns(_consumer, Core::ERROR_NONE, 12, 2);
+        })) << "Out-of-process consumer did not acquire the activated provider";
+
+        ASSERT_EQ(_providerShell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
+        ASSERT_TRUE(WaitUntil([this] {
+            return CalculateReturns(_consumer, Core::ERROR_UNAVAILABLE);
+        })) << "Out-of-process consumer retained the provider after deactivation";
+
+        ASSERT_EQ(_providerShell->Activate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
+        ASSERT_TRUE(WaitUntil([this] {
+            return CalculateReturns(_consumer, Core::ERROR_NONE, 12, 2);
+        })) << "Out-of-process consumer did not reacquire the reactivated provider";
     }
 
 } // namespace Tests

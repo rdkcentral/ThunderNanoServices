@@ -6,7 +6,7 @@ add_subdirectory(Consumer)
 
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 find_package(GTest QUIET)
-find_package(thunder_test_support REQUIRED)
+find_package(thunder_test_support QUIET)
 
 if(NOT GTest_FOUND)
     message(STATUS "${TARGET}: GTest not found — skipping integration tests")
