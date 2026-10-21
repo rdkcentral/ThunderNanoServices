@@ -48,7 +48,6 @@ namespace Plugin {
         }
 
         peer->AddRef();
-        _peers.push_back(peer);
 
         return Core::ERROR_NONE;
     }

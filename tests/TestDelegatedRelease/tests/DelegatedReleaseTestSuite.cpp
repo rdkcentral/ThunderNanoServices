@@ -4,6 +4,9 @@
 #include <qa_interfaces/ITestDelegatedRelease.h>
 #include <test_support/ThunderTestRuntime.h>
 
+#include <atomic>
+#include <memory>
+
 namespace Thunder {
 namespace Plugin {
 namespace Tests {
@@ -19,15 +22,42 @@ namespace Tests {
         constexpr uint32_t WaitTime = 5000;
 
         class Peer : public QualityAssurance::ITestDelegatedReleasePeer {
-        public:
-            explicit Peer(Core::Event& destroyed)
+        private:
+            explicit Peer(const std::shared_ptr<Core::Event>& destroyed)
                 : _destroyed(destroyed)
+                , _refCount(1)
             {
+                ASSERT(_destroyed != nullptr);
+            }
+
+        public:
+            Peer(const Peer&) = delete;
+            Peer& operator=(const Peer&) = delete;
+
+            static QualityAssurance::ITestDelegatedReleasePeer* Create(const std::shared_ptr<Core::Event>& destroyed)
+            {
+                return new Peer(destroyed);
             }
 
             ~Peer() override
             {
-                _destroyed.SetEvent();
+                _destroyed->SetEvent();
+            }
+
+            uint32_t AddRef() const override
+            {
+                ++_refCount;
+                return Core::ERROR_NONE;
+            }
+
+            uint32_t Release() const override
+            {
+                if (--_refCount == 0) {
+                    delete this;
+                    return Core::ERROR_DESTRUCTION_SUCCEEDED;
+                }
+
+                return Core::ERROR_NONE;
             }
 
             Core::hresult Ping(uint32_t& value) override
@@ -41,7 +71,8 @@ namespace Tests {
             END_INTERFACE_MAP
 
         private:
-            Core::Event& _destroyed;
+            std::shared_ptr<Core::Event> _destroyed;
+            mutable std::atomic<uint32_t> _refCount;
         };
 
         TestCore::ThunderTestRuntime::PluginConfig CreatePluginConfig(const char* callsign)
@@ -89,8 +120,8 @@ namespace Tests {
 
     TEST_F(DelegatedReleaseTestSuite, ClosingChannelReleasesRetainedPeer)
     {
-        Core::Event destroyed(false, true);
-        auto* peer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(destroyed);
+        auto destroyed = std::make_shared<Core::Event>(false, true);
+        auto* peer = Peer::Create(destroyed);
         auto* interface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestDelegatedRelease>(Callsign);
         ASSERT_NE(peer, nullptr);
         ASSERT_NE(interface, nullptr);
@@ -98,22 +129,22 @@ namespace Tests {
         ASSERT_EQ(interface->HoldPeer(peer), Core::ERROR_NONE);
         interface->Release();
         EXPECT_NE(peer->Release(), Core::ERROR_DESTRUCTION_SUCCEEDED);
-        EXPECT_EQ(destroyed.Lock(100), Core::ERROR_TIMEDOUT);
+        EXPECT_EQ(destroyed->Lock(100), Core::ERROR_TIMEDOUT);
 
         Core::ProxyType<PluginHost::IShell> shell = _runtime.GetShell(Callsign);
         ASSERT_TRUE(shell.IsValid());
         ASSERT_EQ(shell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
-        EXPECT_EQ(destroyed.Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(destroyed->Lock(WaitTime), Core::ERROR_NONE);
     }
 
     TEST_F(DelegatedReleaseTestSuite, ClosingChannelReleasesMultiplePeerReferences)
     {
-        Core::Event firstDestroyed(false, true);
-        Core::Event secondDestroyed(false, true);
-        Core::Event thirdDestroyed(false, true);
-        auto* firstPeer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(firstDestroyed);
-        auto* secondPeer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(secondDestroyed);
-        auto* thirdPeer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(thirdDestroyed);
+        auto firstDestroyed = std::make_shared<Core::Event>(false, true);
+        auto secondDestroyed = std::make_shared<Core::Event>(false, true);
+        auto thirdDestroyed = std::make_shared<Core::Event>(false, true);
+        auto* firstPeer = Peer::Create(firstDestroyed);
+        auto* secondPeer = Peer::Create(secondDestroyed);
+        auto* thirdPeer = Peer::Create(thirdDestroyed);
         auto* interface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestDelegatedRelease>(Callsign);
         ASSERT_NE(firstPeer, nullptr);
         ASSERT_NE(secondPeer, nullptr);
@@ -131,17 +162,17 @@ namespace Tests {
         Core::ProxyType<PluginHost::IShell> shell = _runtime.GetShell(Callsign);
         ASSERT_TRUE(shell.IsValid());
         ASSERT_EQ(shell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
-        EXPECT_EQ(firstDestroyed.Lock(WaitTime), Core::ERROR_NONE);
-        EXPECT_EQ(secondDestroyed.Lock(WaitTime), Core::ERROR_NONE);
-        EXPECT_EQ(thirdDestroyed.Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(firstDestroyed->Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(secondDestroyed->Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(thirdDestroyed->Lock(WaitTime), Core::ERROR_NONE);
     }
 
     TEST_F(DelegatedReleaseTestSuite, ClosingOneChannelDoesNotReleaseAnotherChannelsPeer)
     {
-        Core::Event firstDestroyed(false, true);
-        Core::Event secondDestroyed(false, true);
-        auto* firstPeer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(firstDestroyed);
-        auto* secondPeer = Core::Service<Peer>::Create<QualityAssurance::ITestDelegatedReleasePeer>(secondDestroyed);
+        auto firstDestroyed = std::make_shared<Core::Event>(false, true);
+        auto secondDestroyed = std::make_shared<Core::Event>(false, true);
+        auto* firstPeer = Peer::Create(firstDestroyed);
+        auto* secondPeer = Peer::Create(secondDestroyed);
         auto* firstInterface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestDelegatedRelease>(Callsign);
         auto* secondInterface = _runtime.QueryInterfaceByCallsign<QualityAssurance::ITestDelegatedRelease>(SecondCallsign);
         ASSERT_NE(firstPeer, nullptr);
@@ -159,13 +190,13 @@ namespace Tests {
         Core::ProxyType<PluginHost::IShell> firstShell = _runtime.GetShell(Callsign);
         ASSERT_TRUE(firstShell.IsValid());
         ASSERT_EQ(firstShell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
-        EXPECT_EQ(firstDestroyed.Lock(WaitTime), Core::ERROR_NONE);
-        EXPECT_EQ(secondDestroyed.Lock(100), Core::ERROR_TIMEDOUT);
+        EXPECT_EQ(firstDestroyed->Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(secondDestroyed->Lock(100), Core::ERROR_TIMEDOUT);
 
         Core::ProxyType<PluginHost::IShell> secondShell = _runtime.GetShell(SecondCallsign);
         ASSERT_TRUE(secondShell.IsValid());
         ASSERT_EQ(secondShell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
-        EXPECT_EQ(secondDestroyed.Lock(WaitTime), Core::ERROR_NONE);
+        EXPECT_EQ(secondDestroyed->Lock(WaitTime), Core::ERROR_NONE);
     }
 
 } // namespace Tests

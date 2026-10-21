@@ -4,8 +4,6 @@
 
 #include <qa_interfaces/ITestDelegatedRelease.h>
 
-#include <vector>
-
 namespace Thunder {
 namespace Plugin {
 
@@ -32,7 +30,6 @@ namespace Plugin {
 
     private:
         PluginHost::IShell* _service = nullptr;
-        std::vector<QualityAssurance::ITestDelegatedReleasePeer*> _peers;
     };
 
 } // namespace Plugin
