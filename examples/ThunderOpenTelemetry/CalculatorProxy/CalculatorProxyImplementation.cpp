@@ -35,9 +35,6 @@ namespace Plugin {
     public:
         CalculatorProxyImplementation()
             : _service(nullptr)
-            , _math(nullptr)
-            , _mathExtended(nullptr)
-            , _registered(false)
         {
         }
         CalculatorProxyImplementation(const CalculatorProxyImplementation&) = delete;
@@ -45,7 +42,7 @@ namespace Plugin {
 
         ~CalculatorProxyImplementation() override
         {
-            Exchange::IMathExtended imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+            Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
             if (imathExtended != nullptr) {
                 imathExtended->Unregister(this);
                 imathExtended->Release();
@@ -65,7 +62,7 @@ namespace Plugin {
 
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            Exchange::IMathExtended imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+            Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
             if (imathExtended != nullptr) {
                 imathExtended->Register(this);
                 imathExtended->Release();
@@ -78,9 +75,9 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            Exchange::IMath imath = _service->QueryInterfaceByCallsign<Exchange::IMath>(_T("Calculator"));
+            Exchange::IMath* imath = _service->QueryInterfaceByCallsign<Exchange::IMath>(_T("Calculator"));
             if (imath != nullptr) {
-                uint32_t result = imath->Add(A, B, sum);
+                result = imath->Add(A, B, sum);
                 imath->Release();
             }
             return result;
@@ -90,9 +87,9 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            Exchange::IMath imath = _service->QueryInterfaceByCallsign<Exchange::IMath>(_T("Calculator"));
+            Exchange::IMath* imath = _service->QueryInterfaceByCallsign<Exchange::IMath>(_T("Calculator"));
             if (imath != nullptr) {
-                uint32_t result = imath->Sub(A, B, sum);
+                result = imath->Sub(A, B, sum);
                 imath->Release();
             }
             return result;
@@ -140,7 +137,7 @@ namespace Plugin {
         {
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
-            Exchange::IMathExtended imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+            Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
             if (imathExtended != nullptr) {
                 imathExtended->Multiply(A, B);
                 imathExtended->Release();
