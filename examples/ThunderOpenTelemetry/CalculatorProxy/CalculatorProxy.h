@@ -38,7 +38,7 @@ namespace Plugin {
     class CalculatorProxy : public PluginHost::IPlugin
         , public PluginHost::JSONRPC {
     private:
-        class Notification : public RPC::IRemoteConnection::INotification, Exchange::IMathExtended::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification, public Exchange::IMathExtended::INotification {
         public:
             explicit Notification(CalculatorProxy& parent)
                 : _parent(parent)

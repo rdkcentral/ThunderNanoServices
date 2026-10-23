@@ -40,7 +40,7 @@ namespace Plugin {
     class Calculator : public PluginHost::IPlugin
         , public PluginHost::JSONRPC {
     private:
-        class Notification : public RPC::IRemoteConnection::INotification, Exchange::IMathExtended::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification, public Exchange::IMathExtended::INotification {
         public:
             explicit Notification(Calculator& parent)
                 : _parent(parent)

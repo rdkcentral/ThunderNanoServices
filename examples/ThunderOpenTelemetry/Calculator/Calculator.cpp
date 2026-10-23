@@ -120,9 +120,9 @@ namespace Plugin {
         }
     }
 
-    void Calculator::INotification::MultiplyResult(const uint32_t result)
+    void Calculator::Notification::MultiplyResult(const uint32_t result)
     {
-        JMathExtended::MultiplyResult(result);
+        Exchange::JMathExtended::Event::MultiplyResult(_parent, result);
     }
 
 } // namespace Plugin

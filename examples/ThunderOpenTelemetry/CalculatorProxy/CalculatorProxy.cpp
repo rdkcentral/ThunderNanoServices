@@ -138,7 +138,7 @@ namespace Plugin {
 
     void CalculatorProxy::Notification::MultiplyResult(const uint32_t result)
     {
-        JMathExtended::MultiplyResult(result);
+        Exchange::JMathExtended::Event::MultiplyResult(_parent, result);
     }
 
 
