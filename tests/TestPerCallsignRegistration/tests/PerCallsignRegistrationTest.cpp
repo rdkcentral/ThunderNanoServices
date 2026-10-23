@@ -13,6 +13,23 @@ namespace Tests {
 
 namespace {
 
+// GTest runs Environment::TearDown() after every --gtest_repeat iteration, so dispose only after the last one.
+struct ScopedSingletonDispose : public ::testing::Environment {
+    void TearDown() override
+    {
+        const int repeat = ::testing::GTEST_FLAG(repeat);
+        if ((repeat > 0) && (++_iterations >= repeat)) {
+            Core::Singleton::Dispose();
+        }
+    }
+
+private:
+    int _iterations { 0 };
+};
+
+const ::testing::Environment* const kGlobalEnv =
+    ::testing::AddGlobalTestEnvironment(new ScopedSingletonDispose());
+
 constexpr const TCHAR* ObserverCallsign = _T("Observer");
 constexpr const TCHAR* PluginACallsign = _T("PluginA");
 constexpr const TCHAR* PluginBCallsign = _T("PluginB");
@@ -142,7 +159,6 @@ protected:
     static void TearDownTestSuite()
     {
         _runtime.Deinitialize();
-        Core::Singleton::Dispose();
     }
 
     void SetUp() override

@@ -2,6 +2,7 @@ set(TARGET PerCallsignRegistrationTests)
 
 find_package(GTest QUIET)
 find_package(thunder_test_support QUIET)
+find_package(${NAMESPACE}Definitions REQUIRED)
 
 if(NOT GTest_FOUND)
     message(STATUS "${TARGET}: GTest not found - skipping per-callsign registration tests")
@@ -50,8 +51,9 @@ endif()
 target_link_libraries(${TARGET}
     PRIVATE
         thunder_test_support::thunder_test_support
-        GTest::gtest
-        GTest::gtest_main
+        ${NAMESPACE}Definitions::${NAMESPACE}Definitions
+        GTest::GTest
+        GTest::Main
 )
 
 set_target_properties(${TARGET} PROPERTIES
