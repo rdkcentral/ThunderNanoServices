@@ -22,173 +22,150 @@
 #include <core/core.h>
 #include <websocket/websocket.h>
 
-#include <cerrno>
+#include <interfaces/json/JsonData_Math.h>
+#include <interfaces/json/JsonData_MathExtended.h>
+
+#include <opentelemetry/opentelemetry.h>
+
+
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
-#include <cstdlib>
-#include <limits>
 #include <mutex>
 
-MODULE_NAME_DECLARATION(BUILD_REFERENCE)
-
-namespace {
+namespace 
+{
 
     using namespace Thunder;
 
-    class MultiplyParams : public Core::JSON::Container {
+    constexpr uint32_t WaitTime = 5000;
+
+    class MultiplyNotification {
     public:
-        MultiplyParams(const uint16_t A, const uint16_t B)
-            : Core::JSON::Container()
-            , A(A)
-            , B(B)
-        {
-            Add(_T("a"), &this->A);
-            Add(_T("b"), &this->B);
-        }
-        MultiplyParams(const MultiplyParams&) = delete;
-        MultiplyParams& operator=(const MultiplyParams&) = delete;
-
-        Core::JSON::DecUInt16 A;
-        Core::JSON::DecUInt16 B;
-    };
-
-    class MultiplyResultParams : public Core::JSON::Container {
-    public:
-        MultiplyResultParams()
-            : Core::JSON::Container()
-            , Result(0)
-        {
-            Add(_T("result"), &Result);
-        }
-        MultiplyResultParams(const MultiplyResultParams&) = delete;
-        MultiplyResultParams& operator=(const MultiplyResultParams&) = delete;
-
-        Core::JSON::DecUInt32 Result;
-    };
-
-    class CalculatorClientJSONRPC : private JSONRPC::SmartLinkType<Core::JSON::IElement> {
-    private:
-        using BaseClass = JSONRPC::SmartLinkType<Core::JSON::IElement>;
-
-    public:
-        CalculatorClientJSONRPC()
-            : BaseClass(_T("CalculatorProxy"), _T("CalculatorClientJSONRPC"))
-            , _subscribed(false)
+        MultiplyNotification()
+            : _adminLock()
+            , _signal()
             , _received(false)
             , _result(0)
         {
         }
-        CalculatorClientJSONRPC(const CalculatorClientJSONRPC&) = delete;
-        CalculatorClientJSONRPC& operator=(const CalculatorClientJSONRPC&) = delete;
-
-        ~CalculatorClientJSONRPC() override
+        
+        void OnModified(const JsonData::MathExtended::MultiplyResultParamsData& parameters)
         {
-            if (_subscribed == true) {
-                BaseClass::Unsubscribe(3000, _T("multiplyresult"));
-            }
-        }
 
-        uint32_t Subscribe()
-        {
-            const uint32_t result = BaseClass::Subscribe<MultiplyResultParams>(
-                3000, _T("multiplyresult"), &CalculatorClientJSONRPC::MultiplyResult, this);
-            _subscribed = (result == Core::ERROR_NONE);
-            return result;
-        }
+            printf("\n\n Received Multiply Notification \n\n");
 
-        uint32_t Multiply(const uint16_t A, const uint16_t B)
-        {
+            uint32_t result = parameters.Result.Value();
+
+            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply Received");
+            span->Activate();
+            std::string textresult{"Multiply result ="};
+            textresult += std::to_string(result) ;
+            Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, textresult);
+
             {
-                std::lock_guard<std::mutex> lock(_adminLock);
-                _received = false;
+                std::lock_guard<std::mutex> guard(_adminLock);
+                _received = true;
+                _result = result;
             }
-
-            const MultiplyParams parameters(A, B);
-            return BaseClass::Invoke<MultiplyParams, void>(3000, _T("multiply"), parameters);
+            _signal.notify_one();
         }
 
-        bool WaitForResult(uint32_t& result)
+        bool WaitFor(uint32_t& result) 
         {
             std::unique_lock<std::mutex> lock(_adminLock);
-            const bool received = _resultAvailable.wait_for(lock, std::chrono::seconds(5), [this]() {
-                return _received;
-            });
-
-            if (received == true) {
+            return _signal.wait_for(lock, std::chrono::milliseconds(WaitTime), [this, &result] {
                 result = _result;
-            }
-
-            return received;
+                return (_received == true);
+            });
         }
 
     private:
-        void MultiplyResult(const MultiplyResultParams& parameters)
-        {
-            {
-                std::lock_guard<std::mutex> lock(_adminLock);
-                _result = parameters.Result.Value();
-                _received = true;
-            }
-            _resultAvailable.notify_one();
-        }
-
-    private:
-        bool _subscribed;
-        std::mutex _adminLock;
-        std::condition_variable _resultAvailable;
+        mutable std::mutex _adminLock;
+        std::condition_variable _signal;
         bool _received;
         uint32_t _result;
     };
+}
 
-    bool ParseOperand(const char value[], uint16_t& operand)
-    {
-        char* end = nullptr;
-        errno = 0;
-        const unsigned long parsed = std::strtoul(value, &end, 10);
-
-        if ((errno != 0) || (end == value) || (*end != '\0') || (parsed > std::numeric_limits<uint16_t>::max())) {
-            return false;
-        }
-
-        operand = static_cast<uint16_t>(parsed);
-        return true;
-    }
-
-} // namespace
+MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3) {
-        std::fprintf(stderr, "Usage: %s <A> <B>\n", argv[0]);
+
+    string callsign(_T("CalculatorProxy"));
+
+    if(argc >= 2)
+    {
+        callsign = argv[1];
+    }
+
+    string config{ R"({"sampler":"AlwaysOn", "loggerenabled" : true ,"componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
+
+    Telemetry::OpenTelemetry::Config telemetryConfig;
+    telemetryConfig.FromString(config);
+    Telemetry::OpenTelemetry::Configure(telemetryConfig);
+    Telemetry::OpenTelemetry::Instance().Initialize();
+
+    auto tracestate = opentelemetry::trace::TraceState::GetDefault();
+    tracestate = tracestate->Set("RDK", "tracevalue2");
+    string tracestatesheader = tracestate->ToHeader();
+    Core::JobContext::Instance().TraceState(tracestatesheader);
+
+    {
+        auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();
+
+		Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, "trace state set");
+    }
+
+    string access;
+    if (Core::SystemInfo::GetEnvironment(_T("THUNDER_ACCESS"), access) == false) {
+#ifdef __WINDOWS__
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:25555"));
+#else
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:80"));
+#endif
+    }
+
+    printf("*** Calculator using %s ***\n\n", callsign.c_str());
+
+    uint16_t A = 40;
+    uint16_t B = 40;
+
+
+    JSONRPC::LinkType<Core::JSON::IElement> link(callsign);
+    MultiplyNotification notification;
+    uint32_t result = link.Subscribe<JsonData::MathExtended::MultiplyResultParamsData>(WaitTime, _T("multiplyResult"), &MultiplyNotification::OnModified, &notification);
+    if (result != Core::ERROR_NONE) {
+        std::fprintf(stderr, "Subscription to multiply event failed: %u\n", result);
         return 1;
     }
 
-    uint16_t A = 0;
-    uint16_t B = 0;
-    if ((ParseOperand(argv[1], A) == false) || (ParseOperand(argv[2], B) == false)) {
-        std::fprintf(stderr, "Operands must be unsigned 16-bit integers.\n");
-        return 1;
-    }
+	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
+    (*span)->SetAttribute("Multiply","40x40");
 
-    CalculatorClientJSONRPC client;
-    uint32_t result = client.Subscribe();
-    if (result != Thunder::Core::ERROR_NONE) {
-        std::fprintf(stderr, "Failed to subscribe to CalculatorProxy.multiplyresult: %u\n", result);
+    JsonData::MathExtended::MultiplyParamsData parameters;
+    parameters.A = A;
+    parameters.B = B;
+    result = link.Invoke<JsonData::MathExtended::MultiplyParamsData, void>(WaitTime, _T("multiply"), parameters);
+    if (result != Core::ERROR_NONE) {
+        std::fprintf(stderr, "Multiply failed: %u\n", result);
+        link.Unsubscribe(WaitTime, _T("multiplyResult"));
         return 2;
     }
 
-    result = client.Multiply(A, B);
-    if (result != Thunder::Core::ERROR_NONE) {
-        std::fprintf(stderr, "CalculatorProxy.multiply failed: %u\n", result);
+    uint32_t product = 0;
+    const bool notified = notification.WaitFor(product);
+    
+    span->End();
+
+    if(notified == false) {
+        std::fprintf(stderr, "Multiply result notification timed out\n");
+        link.Unsubscribe(WaitTime, _T("multiplyResult"));
         return 3;
     }
 
-    uint32_t product = 0;
-    if (client.WaitForResult(product) == false) {
-        std::fprintf(stderr, "Timed out waiting for CalculatorProxy.multiplyresult.\n");
-        return 4;
-    }
+    link.Unsubscribe(WaitTime, _T("multiplyResult"));
 
     std::printf("%u * %u = %u\n", A, B, product);
     return 0;

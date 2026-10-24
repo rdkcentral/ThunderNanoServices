@@ -21,7 +21,7 @@
  //********************************** */
 
 
-// NOTE generated with AI, might not adhere to all proper Thunder conventions
+// NOTE generated with AI, might not adhere to all proper Thunder conventions (e.g. Plugin activation/deactivation order)
 
 
  //********************************** */
@@ -36,9 +36,10 @@ namespace Thunder {
 namespace Plugin {
 
     class CalculatorProxy : public PluginHost::IPlugin
+        , public Exchange::IMathExtended::INotification
         , public PluginHost::JSONRPC {
     private:
-        class Notification : public RPC::IRemoteConnection::INotification, public Exchange::IMathExtended::INotification {
+        class Notification : public RPC::IRemoteConnection::INotification {
         public:
             explicit Notification(CalculatorProxy& parent)
                 : _parent(parent)
@@ -50,11 +51,9 @@ namespace Plugin {
             {
             }
             void Deactivated(RPC::IRemoteConnection* connection) override;
-            void MultiplyResult(const uint32_t result) override;
 
             BEGIN_INTERFACE_MAP(Notification)
                 INTERFACE_ENTRY(RPC::IRemoteConnection::INotification)
-                INTERFACE_ENTRY(Exchange::IMathExtended::INotification) 
             END_INTERFACE_MAP
 
         private:
@@ -73,9 +72,12 @@ namespace Plugin {
 
         void Deactivated(RPC::IRemoteConnection* connection);
 
+        void MultiplyResult(const uint32_t result) override;
+
         BEGIN_INTERFACE_MAP(CalculatorProxy)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
+            INTERFACE_ENTRY(Exchange::IMathExtended::INotification)
             INTERFACE_AGGREGATE(Exchange::IMath, _math)
             INTERFACE_AGGREGATE(Exchange::IMathExtended, _mathExtended)
         END_INTERFACE_MAP

@@ -29,6 +29,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
+find_package(${NAMESPACE}OpenTelemetry REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(${MODULE_NAME}
@@ -42,7 +43,8 @@ target_link_libraries(${MODULE_NAME}
     PRIVATE
         CompileSettingsDebug::CompileSettingsDebug
         ${NAMESPACE}COM::${NAMESPACE}COM
-        ${NAMESPACE}Core::${NAMESPACE}Core)
+        ${NAMESPACE}Core::${NAMESPACE}Core
+        ${NAMESPACE}OpenTelemetry::${NAMESPACE}OpenTelemetry)
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

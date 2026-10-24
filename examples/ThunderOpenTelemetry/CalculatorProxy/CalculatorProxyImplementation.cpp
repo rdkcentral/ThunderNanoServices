@@ -22,6 +22,9 @@
 #include <interfaces/IConfiguration.h>
 #include <interfaces/IMath.h>
 
+#include <interfaces/json/JMathExtended.h>
+
+
 #include <algorithm>
 #include <vector>
 
@@ -30,11 +33,15 @@ namespace Plugin {
 
     class CalculatorProxyImplementation : public Exchange::IMath
         , public Exchange::IMathExtended
-        , public Exchange::IMathExtended::INotification
-        , public Exchange::IConfiguration {
+        , public Exchange::IMathExtended::INotification  
+        , public Exchange::IConfiguration     
+    {
     public:
         CalculatorProxyImplementation()
             : _service(nullptr)
+            , _adminLock()
+            , _notifications()
+            , _registeredfornotifications(false)
         {
         }
         CalculatorProxyImplementation(const CalculatorProxyImplementation&) = delete;
@@ -42,33 +49,30 @@ namespace Plugin {
 
         ~CalculatorProxyImplementation() override
         {
-            Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
-            if (imathExtended != nullptr) {
-                imathExtended->Unregister(this);
-                imathExtended->Release();
+            ASSERT(_service != nullptr);
+
+            if(_registeredfornotifications == true) {
+                Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+                if (imathExtended != nullptr) {
+                    imathExtended->Unregister(this);
+                    imathExtended->Release();
+                }
             }
+            
             if (_service != nullptr) {
                 _service->Release();
             }
         }
 
-        uint32_t Configure(PluginHost::IShell* service) override
+        uint32_t Configure(PluginHost::IShell* shell) override     
         {
-            ASSERT(service != nullptr);
+            ASSERT(shell != nullptr);
             ASSERT(_service == nullptr);
 
-            _service = service;
-            _service->AddRef();
+            _service = shell;
+            static_cast<void>(_service->AddRef());
 
-            uint32_t result = Core::ERROR_UNAVAILABLE;
-
-            Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
-            if (imathExtended != nullptr) {
-                imathExtended->Register(this);
-                imathExtended->Release();
-            }
-
-            return result;
+            return Core::ERROR_NONE;
         }
 
         uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
@@ -97,6 +101,7 @@ namespace Plugin {
 
         Core::hresult Register(Exchange::IMathExtended::INotification* const notification) override
         {
+
             Core::hresult result = Core::ERROR_BAD_REQUEST;
             if (notification != nullptr) {
                 Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
@@ -106,6 +111,15 @@ namespace Plugin {
                     notification->AddRef();
                     _notifications.push_back(notification);
                     result = Core::ERROR_NONE;
+                    if((_notifications.size() == 1) && (_registeredfornotifications == false)) {
+                        Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+                        if (imathExtended != nullptr) {
+                            imathExtended->Register(this);
+                            imathExtended->Release();
+                            _registeredfornotifications = true;
+                        }
+
+                    }
                 }
             }
 
@@ -139,7 +153,17 @@ namespace Plugin {
 
             Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
             if (imathExtended != nullptr) {
-                imathExtended->Multiply(A, B);
+                _adminLock.Lock();
+                if(_registeredfornotifications == false){
+                    Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
+                    if (imathExtended != nullptr) {
+                        imathExtended->Register(this);
+                        imathExtended->Release();
+                        _registeredfornotifications = true;
+                    }
+                }
+                _adminLock.Unlock();
+                result = imathExtended->Multiply(A, B);
                 imathExtended->Release();
             }
 
@@ -148,18 +172,14 @@ namespace Plugin {
 
         void MultiplyResult(const uint32_t result) override
         {
-            std::vector<Exchange::IMathExtended::INotification*> notifications;
-            {
-                Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
-                notifications = _notifications;
-                for (auto* notification : notifications) {
-                    notification->AddRef();
-                }
+            Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
+            for (auto* notification : _notifications) {
+                notification->MultiplyResult(result);
             }
 
-            for (auto* notification : notifications) {
-                notification->MultiplyResult(result);
-                notification->Release();
+            Exchange::IMathExtended::INotification* internalnotification = _service->QueryInterface<Exchange::IMathExtended::INotification>();
+            if(internalnotification != nullptr){
+                internalnotification->MultiplyResult(result);
             }
         }
 
@@ -174,6 +194,7 @@ namespace Plugin {
         PluginHost::IShell* _service;
         Core::CriticalSection _adminLock;
         std::vector<Exchange::IMathExtended::INotification*> _notifications;
+        bool _registeredfornotifications;
     };
 
     SERVICE_REGISTRATION(CalculatorProxyImplementation, 1, 0)

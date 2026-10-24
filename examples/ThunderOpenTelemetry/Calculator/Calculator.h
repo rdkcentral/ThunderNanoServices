@@ -20,7 +20,7 @@
 //********************************** */
 
 
-// NOTE generated with AI, might not adhere to all proper Thunder conventions
+// NOTE generated with AI, might not adhere to all proper Thunder conventions  (e.g. Plugin activation/deactivation order)
 
 
  //********************************** */

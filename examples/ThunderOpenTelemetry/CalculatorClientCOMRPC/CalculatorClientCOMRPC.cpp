@@ -29,12 +29,13 @@
 
 
 
-#define MODULE_NAME CalculatorClientCOMRPC
+#define MODULE_NAME CalculatorExtendedClientCOMRPC
 
 #include <com/com.h>
 #include <core/core.h>
 #include <interfaces/IMath.h>
 #include <plugins/plugins.h>
+#include <opentelemetry/opentelemetry.h>
 
 #include <cerrno>
 #include <chrono>
@@ -50,13 +51,13 @@ namespace {
 
     using namespace Thunder;
 
-    class CalculatorClientCOMRPC : private RPC::SmartInterfaceType<Exchange::IMathExtended> {
+    class CalculatorExtendedClientCOMRPC : private RPC::SmartInterfaceType<Exchange::IMathExtended> {
     private:
         using BaseClass = RPC::SmartInterfaceType<Exchange::IMathExtended>;
 
         class Notification : public Exchange::IMathExtended::INotification {
         public:
-            explicit Notification(CalculatorClientCOMRPC& parent)
+            explicit Notification(CalculatorExtendedClientCOMRPC& parent)
                 : _parent(parent)
             {
             }
@@ -64,6 +65,12 @@ namespace {
 
             void MultiplyResult(const uint32_t result) override
             {
+
+	            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply Received");
+                span->Activate();
+                std::string textresult{"Multiply result ="};
+                textresult += std::to_string(result) ;
+                Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, textresult);
                 _parent.MultiplyResult(result);
             }
 
@@ -72,11 +79,11 @@ namespace {
             END_INTERFACE_MAP
 
         private:
-            CalculatorClientCOMRPC& _parent;
+            CalculatorExtendedClientCOMRPC& _parent;
         };
 
     public:
-        CalculatorClientCOMRPC()
+        CalculatorExtendedClientCOMRPC()
             : BaseClass()
             , _notification(*this)
             , _interface(nullptr)
@@ -84,17 +91,19 @@ namespace {
             , _result(0)
         {
         }
-        CalculatorClientCOMRPC(const CalculatorClientCOMRPC&) = delete;
-        CalculatorClientCOMRPC& operator=(const CalculatorClientCOMRPC&) = delete;
+        CalculatorExtendedClientCOMRPC(const CalculatorExtendedClientCOMRPC&) = delete;
+        CalculatorExtendedClientCOMRPC& operator=(const CalculatorExtendedClientCOMRPC&) = delete;
 
-        ~CalculatorClientCOMRPC()
+        ~CalculatorExtendedClientCOMRPC()
         {
             Close();
         }
 
-        uint32_t Open()
+        uint32_t Open(const string& callsign)
         {
-            uint32_t result = BaseClass::Open(3000, BaseClass::Connector(), _T("CalculatorProxy"));
+
+            uint32_t result = BaseClass::Open(3000, BaseClass::Connector(), callsign);
+
             if (result == Core::ERROR_NONE) {
                 _interface = BaseClass::Interface();
                 if (_interface == nullptr) {
@@ -152,6 +161,9 @@ namespace {
     private:
         void MultiplyResult(const uint32_t result)
         {
+
+            printf("Multiply result received: %u\n", result);
+
             {
                 std::lock_guard<std::mutex> lock(_adminLock);
                 _result = result;
@@ -169,55 +181,64 @@ namespace {
         uint32_t _result;
     };
 
-    bool ParseOperand(const char value[], uint16_t& operand)
-    {
-        char* end = nullptr;
-        errno = 0;
-        const unsigned long parsed = std::strtoul(value, &end, 10);
-
-        if ((errno != 0) || (end == value) || (*end != '\0') || (parsed > std::numeric_limits<uint16_t>::max())) {
-            return false;
-        }
-
-        operand = static_cast<uint16_t>(parsed);
-        return true;
-    }
-
 } // namespace
 
 int main(int argc, char* argv[])
 {
-    if (argc != 3) {
-        std::fprintf(stderr, "Usage: %s <A> <B>\n", argv[0]);
-        return 1;
+    string callsign(_T("CalculatorProxy"));
+
+    if(argc >= 2)
+    {
+        callsign = argv[1];
     }
 
-    uint16_t A = 0;
-    uint16_t B = 0;
-    if ((ParseOperand(argv[1], A) == false) || (ParseOperand(argv[2], B) == false)) {
-        std::fprintf(stderr, "Operands must be unsigned 16-bit integers.\n");
-        return 1;
+    printf("*** Calculator using %s ***\n\n", callsign.c_str());
+
+    string config{ R"({"sampler":"AlwaysOn", "loggerenabled" : true ,"componentname":"Thunder COMRPC test app","componentversion":"1.0.1"})" };
+
+    Telemetry::OpenTelemetry::Config telemetryConfig;
+    telemetryConfig.FromString(config);
+    Telemetry::OpenTelemetry::Configure(telemetryConfig);
+    Telemetry::OpenTelemetry::Instance().Initialize();
+
+    auto tracestate = opentelemetry::trace::TraceState::GetDefault();
+    tracestate = tracestate->Set("RDK", "tracevalue");
+    string tracestatesheader = tracestate->ToHeader();
+    Core::JobContext::Instance().TraceState(tracestatesheader);
+
+    {
+        auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();
+
+		Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, "trace state set");
     }
 
-    CalculatorClientCOMRPC client;
-    uint32_t result = client.Open();
+    CalculatorExtendedClientCOMRPC client;
+    uint32_t result = client.Open(callsign);
     if (result != Thunder::Core::ERROR_NONE) {
-        std::fprintf(stderr, "Failed to connect to CalculatorProxy: %u\n", result);
-        return 2;
+        std::fprintf(stderr, "Failed to connect to %s: %u\n", callsign.c_str(), result);
+        return 5;
     }
 
-    result = client.Multiply(A, B);
+	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
+    (*span)->SetAttribute("Multiply","20x20");
+
+    result = client.Multiply(20, 20);
     if (result != Thunder::Core::ERROR_NONE) {
         std::fprintf(stderr, "Multiply failed: %u\n", result);
-        return 3;
+        return 6;
     }
 
     uint32_t product = 0;
     if (client.WaitForResult(product) == false) {
         std::fprintf(stderr, "Timed out waiting for MultiplyResult.\n");
-        return 4;
+        return 7;
     }
 
-    std::printf("%u * %u = %u\n", A, B, product);
+    span->End();
+
+    std::printf("%u * %u = %u\n", 20, 20, product);
+
+    client.Close();
+
     return 0;
 }

@@ -31,6 +31,7 @@ find_package(${NAMESPACE}COM REQUIRED)
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(${NAMESPACE}WebSocket REQUIRED)
+find_package(${NAMESPACE}OpenTelemetry REQUIRED)
 find_package(CompileSettingsDebug CONFIG REQUIRED)
 
 add_executable(${MODULE_NAME}
@@ -46,7 +47,10 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}COM::${NAMESPACE}COM
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Messaging::${NAMESPACE}Messaging
-        ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket)
+        ${NAMESPACE}WebSocket::${NAMESPACE}WebSocket
+        ${NAMESPACE}OpenTelemetry::${NAMESPACE}OpenTelemetry)
+        
+
 
 install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT ${NAMESPACE}_Runtime)

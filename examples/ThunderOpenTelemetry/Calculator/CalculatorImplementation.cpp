@@ -30,12 +30,24 @@ namespace Plugin {
     class CalculatorImplementation : public Exchange::IMath
         , public Exchange::IMathExtended {
     public:
-        CalculatorImplementation() = default;
+
+        PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
+
+        CalculatorImplementation()
+        : _adminLock()
+        ,_notifications()
+        , _resultjob(*this)
+        {
+        }
+
+        POP_WARNING()
+
         CalculatorImplementation(const CalculatorImplementation&) = delete;
         CalculatorImplementation& operator=(const CalculatorImplementation&) = delete;
 
         ~CalculatorImplementation() override
         {
+            _resultjob.Revoke();
             for (auto* notification : _notifications) {
                 notification->Release();
             }
@@ -95,13 +107,47 @@ namespace Plugin {
         Core::hresult Multiply(const uint16_t A, const uint16_t B) override
         {
             const uint32_t result = static_cast<uint32_t>(A) * static_cast<uint32_t>(B);
-            Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
-            for (auto* notification : _notifications) {
-                notification->MultiplyResult(result);
-            }
+            _resultjob.Revoke();
+            static_cast<MultiplayResultJob&>(_resultjob).SetContext(result, Core::JobContext::Instance().TraceContextW3C());
+            _resultjob.Submit();
 
             return Core::ERROR_NONE;
         }
+
+
+        class MultiplayResultJob 
+        {
+        public:
+            MultiplayResultJob(CalculatorImplementation& parent) 
+            : _parent(parent)
+            , _result(0)
+            , _tracecontext()
+            {
+            }
+
+            void SetContext(const uint32_t result, const Core::JobContext::W3CTraceContext& context)
+            {
+                _tracecontext = context;
+                _result = result;
+            }
+
+            void Dispatch() const
+            {
+                Core::JobContext::Instance().TraceContextW3C() = _tracecontext;
+                {
+                    Core::SafeSyncType<Core::CriticalSection> lock(_parent._adminLock);
+                    for (auto* notification : _parent._notifications) {
+                        notification->MultiplyResult(_result);
+                    }
+                }
+                Core::JobContext::Instance().TraceContextW3C().ClearTraceContext();
+            }
+
+        private:
+            CalculatorImplementation& _parent;
+            uint32_t _result;
+            Core::JobContext::W3CTraceContext _tracecontext;
+        };
 
         BEGIN_INTERFACE_MAP(CalculatorImplementation)
             INTERFACE_ENTRY(Exchange::IMath)
@@ -111,6 +157,9 @@ namespace Plugin {
     private:
         Core::CriticalSection _adminLock;
         std::vector<Exchange::IMathExtended::INotification*> _notifications;
+        Core::WorkerPool::JobType<MultiplayResultJob> _resultjob;            
+
+
     };
 
     SERVICE_REGISTRATION(CalculatorImplementation, 1, 0)

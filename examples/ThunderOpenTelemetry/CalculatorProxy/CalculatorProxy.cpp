@@ -57,27 +57,16 @@ namespace Plugin {
         if (_math == nullptr) {
             message = _T("Calculator proxy implementation could not be instantiated");
         } else {
-            Exchange::IConfiguration* configuration = _math->QueryInterface<Exchange::IConfiguration>();
-            if (configuration == nullptr) {
-                message = _T("Calculator proxy implementation does not expose IConfiguration");
+            Exchange::IConfiguration* config = _math->QueryInterface<Exchange::IConfiguration>();
+            ASSERT(config != nullptr);
+            config->Configure(_service);
+            config->Release();
+            Exchange::JMath::Register(*this, _math);
+            _mathExtended = _math->QueryInterface<Exchange::IMathExtended>();
+            if (_mathExtended == nullptr) {
+                message = _T("Calculator proxy implementation does not expose IMathExtended");
             } else {
-                const uint32_t result = configuration->Configure(_service);
-                configuration->Release();
-
-                if (result != Core::ERROR_NONE) {
-                    message = _T("Calculator proxy implementation could not be configured");
-                } else {
-                    Exchange::JMath::Register(*this, _math);
-
-                    _mathExtended = _math->QueryInterface<Exchange::IMathExtended>();
-                    if (_mathExtended == nullptr) {
-                        message = _T("Calculator proxy implementation does not expose IMathExtended");
-                    } else {
-                        _mathExtended->Register(&_notification);
-
-                        Exchange::JMathExtended::Register(*this, _mathExtended);
-                    }
-                }
+                Exchange::JMathExtended::Register(*this, _mathExtended);
             }
         }
 
@@ -90,8 +79,7 @@ namespace Plugin {
             ASSERT(_service == service);
 
             if (_mathExtended != nullptr) {
-                _mathExtended->Unregister(&_notification);
-                
+               
                 Exchange::JMathExtended::Unregister(*this);
                 _mathExtended->Release();
                 _mathExtended = nullptr;
@@ -136,11 +124,10 @@ namespace Plugin {
         }
     }
 
-    void CalculatorProxy::Notification::MultiplyResult(const uint32_t result)
+    void CalculatorProxy::MultiplyResult(const uint32_t result)
     {
-        Exchange::JMathExtended::Event::MultiplyResult(_parent, result);
+        Exchange::JMathExtended::Event::MultiplyResult(*this, result);
     }
-
 
 } // namespace Plugin
 } // namespace Thunder
