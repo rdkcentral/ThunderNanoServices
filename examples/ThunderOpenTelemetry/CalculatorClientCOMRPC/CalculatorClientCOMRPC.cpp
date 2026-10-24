@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
     auto tracestate = opentelemetry::trace::TraceState::GetDefault();
     tracestate = tracestate->Set("RDK", "tracevalue");
     string tracestatesheader = tracestate->ToHeader();
-    Core::JobContext::Instance().TraceState(tracestatesheader);
+    Core::JobContext::Instance().TraceContextW3C().TraceState(tracestatesheader);
 
     {
         auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();

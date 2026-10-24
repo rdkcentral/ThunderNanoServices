@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     auto tracestate = opentelemetry::trace::TraceState::GetDefault();
     tracestate = tracestate->Set("RDK", "tracevalue2");
     string tracestatesheader = tracestate->ToHeader();
-    Core::JobContext::Instance().TraceState(tracestatesheader);
+    Core::JobContext::Instance().TraceContextW3C().TraceState(tracestatesheader);
 
     {
         auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 
     uint32_t product = 0;
     const bool notified = notification.WaitFor(product);
-    
+
     span->End();
 
     if(notified == false) {
