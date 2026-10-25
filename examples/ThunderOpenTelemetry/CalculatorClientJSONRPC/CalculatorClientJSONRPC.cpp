@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         callsign = argv[1];
     }
 
-    string config{ R"({"sampler":"AlwaysOn", "loggerenabled" : true ,"componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
+    string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true}, "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
     telemetryConfig.FromString(config);
@@ -108,7 +108,7 @@ int main(int argc, char* argv[])
     Telemetry::OpenTelemetry::Instance().Initialize();
 
     auto tracestate = opentelemetry::trace::TraceState::GetDefault();
-    tracestate = tracestate->Set("RDK", "tracevalue2");
+    tracestate = tracestate->Set("rdk", "someothervalue");  // note uppercase not allowed
     string tracestatesheader = tracestate->ToHeader();
     Core::JobContext::Instance().TraceContextW3C().TraceState(tracestatesheader);
 
@@ -168,5 +168,11 @@ int main(int argc, char* argv[])
     link.Unsubscribe(WaitTime, _T("multiplyResult"));
 
     std::printf("%u * %u = %u\n", A, B, product);
+
+    Telemetry::OpenTelemetry::Instance().Deinitialize();
+    
+    char c;
+    std::cin >> c;
+
     return 0;
 }

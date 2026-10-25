@@ -24,6 +24,7 @@
 
 #include <interfaces/json/JMathExtended.h>
 
+#include <opentelemetry/opentelemetry.h>
 
 #include <algorithm>
 #include <vector>
@@ -43,6 +44,12 @@ namespace Plugin {
             , _notifications()
             , _registeredfornotifications(false)
         {
+            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder CalculatorProxy":"1.0.1"})" };
+
+            Telemetry::OpenTelemetry::Config telemetryConfig;
+            telemetryConfig.FromString(config);
+            Telemetry::OpenTelemetry::Configure(telemetryConfig);
+            Telemetry::OpenTelemetry::Instance().Initialize();
         }
         CalculatorProxyImplementation(const CalculatorProxyImplementation&) = delete;
         CalculatorProxyImplementation& operator=(const CalculatorProxyImplementation&) = delete;
@@ -62,6 +69,8 @@ namespace Plugin {
             if (_service != nullptr) {
                 _service->Release();
             }
+
+            Telemetry::OpenTelemetry::Instance().Deinitialize();
         }
 
         uint32_t Configure(PluginHost::IShell* shell) override     
@@ -149,18 +158,20 @@ namespace Plugin {
 
         Core::hresult Multiply(const uint16_t A, const uint16_t B) override
         {
+          	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply");
+
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
             Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
             if (imathExtended != nullptr) {
                 _adminLock.Lock();
                 if(_registeredfornotifications == false){
-                    Exchange::IMathExtended* imathExtended = _service->QueryInterfaceByCallsign<Exchange::IMathExtended>(_T("Calculator"));
-                    if (imathExtended != nullptr) {
-                        imathExtended->Register(this);
-                        imathExtended->Release();
-                        _registeredfornotifications = true;
-                    }
+
+                  	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply Registering");
+                   (*span)->SetAttribute("Test","Nested spans in same thread");
+
+                    imathExtended->Register(this);
+                   _registeredfornotifications = true;
                 }
                 _adminLock.Unlock();
                 result = imathExtended->Multiply(A, B);
@@ -172,6 +183,8 @@ namespace Plugin {
 
         void MultiplyResult(const uint32_t result) override
         {
+          	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply Sending results");
+
             Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
             for (auto* notification : _notifications) {
                 notification->MultiplyResult(result);

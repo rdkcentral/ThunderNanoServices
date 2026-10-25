@@ -65,7 +65,6 @@ namespace {
 
             void MultiplyResult(const uint32_t result) override
             {
-
 	            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply Received");
                 span->Activate();
                 std::string textresult{"Multiply result ="};
@@ -194,15 +193,20 @@ int main(int argc, char* argv[])
 
     printf("*** Calculator using %s ***\n\n", callsign.c_str());
 
-    string config{ R"({"sampler":"AlwaysOn", "loggerenabled" : true ,"componentname":"Thunder COMRPC test app","componentversion":"1.0.1"})" };
+    string config{ R"({"sampler":"ParentOn", "metrics": {"enabled" : false, "intervalMs" : 1000, "timeoutMs" : 2000}, "resources" : {"schemaURL" : "url", "attributes":[{"key":"1", "value":"V1"},{"key":"2", "value":"V2"}]}, "logger": {"loggerenabled" : true}, "componentname":"Thunder COMRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
-    telemetryConfig.FromString(config);
+    Core::OptionalType<Core::JSON::Error> error;
+    telemetryConfig.FromString(config, error);
+    if(error.IsSet() == true) {
+        printf("\nError parsing config: %s\n\n", error.Value().Message().c_str());
+    }
     Telemetry::OpenTelemetry::Configure(telemetryConfig);
+
     Telemetry::OpenTelemetry::Instance().Initialize();
 
     auto tracestate = opentelemetry::trace::TraceState::GetDefault();
-    tracestate = tracestate->Set("RDK", "tracevalue");
+    tracestate = tracestate->Set("rdk", "somevalue");  // note uppercase not allowed
     string tracestatesheader = tracestate->ToHeader();
     Core::JobContext::Instance().TraceContextW3C().TraceState(tracestatesheader);
 
@@ -234,11 +238,29 @@ int main(int argc, char* argv[])
         return 7;
     }
 
+    span->Activate();
+
+    {
+        auto multiplications = Telemetry::OpenTelemetry::Instance().Meter()->CreateUInt64Counter("multiplications", "Number of multiplications processed", "{multiplications}");
+        auto latency = Telemetry::OpenTelemetry::Instance().Meter()->CreateDoubleHistogram("multiplications.duration", "multiplications processing duration", "ms");
+
+        std::map<std::string, std::string> attrs{{"multiplications.provider", "thunder"}};
+        auto attrs_view = opentelemetry::common::KeyValueIterableView<decltype(attrs)>{attrs};
+
+        multiplications->Add(1, attrs_view);
+        latency->Record(42.0, attrs_view, opentelemetry::context::Context{});
+    }
+
     span->End();
 
     std::printf("%u * %u = %u\n", 20, 20, product);
 
     client.Close();
+
+    Telemetry::OpenTelemetry::Instance().Deinitialize();
+
+    char c;
+    std::cin >> c;
 
     return 0;
 }

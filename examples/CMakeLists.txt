@@ -43,7 +43,7 @@ option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceTyp
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(EXAMPLE_GENERATORSHOWCASE_EXAMPLE "Include GeneratorShowCase example" OFF)
 option(EXAMPLE_CUSTOMCODE_EXAMPLE "Include Custom Code example" OFF)
-option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" ON)
+option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)

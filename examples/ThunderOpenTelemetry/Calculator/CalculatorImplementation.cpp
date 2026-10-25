@@ -21,6 +21,8 @@
 
 #include <interfaces/IMath.h>
 
+#include <opentelemetry/opentelemetry.h>
+
 #include <algorithm>
 #include <vector>
 
@@ -38,6 +40,12 @@ namespace Plugin {
         ,_notifications()
         , _resultjob(*this)
         {
+            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder Calculator":"1.0.1"})" };
+
+            Telemetry::OpenTelemetry::Config telemetryConfig;
+            telemetryConfig.FromString(config);
+            Telemetry::OpenTelemetry::Configure(telemetryConfig);
+            Telemetry::OpenTelemetry::Instance().Initialize();
         }
 
         POP_WARNING()
@@ -47,10 +55,7 @@ namespace Plugin {
 
         ~CalculatorImplementation() override
         {
-            _resultjob.Revoke();
-            for (auto* notification : _notifications) {
-                notification->Release();
-            }
+            Telemetry::OpenTelemetry::Instance().Deinitialize();
         }
 
         uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
@@ -67,6 +72,10 @@ namespace Plugin {
 
         Core::hresult Register(Exchange::IMathExtended::INotification* const notification) override
         {
+           	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Register");
+            auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();
+		    Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, "notification set");
+
             Core::hresult result = Core::ERROR_NONE;
             if (notification == nullptr) {
                 result = Core::ERROR_BAD_REQUEST;
@@ -106,6 +115,17 @@ namespace Plugin {
 
         Core::hresult Multiply(const uint16_t A, const uint16_t B) override
         {
+         	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply");
+
+            auto logrecord = Telemetry::OpenTelemetry::Instance().CreateTraceFilledLogRecord();
+            logrecord->SetSeverity(opentelemetry::logs::Severity::kInfo);
+            string values;
+            values += std::to_string(A);
+            values += _T(" and ");
+            values += std::to_string(B);
+            logrecord->SetAttribute("Values", values);
+            Telemetry::OpenTelemetry::Instance().Logger()->EmitLogRecord(std::move(logrecord));
+
             const uint32_t result = static_cast<uint32_t>(A) * static_cast<uint32_t>(B);
             _resultjob.Revoke();
             static_cast<MultiplayResultJob&>(_resultjob).SetContext(result, Core::JobContext::Instance().TraceContextW3C());
@@ -133,6 +153,7 @@ namespace Plugin {
 
             void Dispatch() const
             {
+             	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Sending results");
                 Core::JobContext::Instance().TraceContextW3C() = _tracecontext;
                 {
                     Core::SafeSyncType<Core::CriticalSection> lock(_parent._adminLock);
