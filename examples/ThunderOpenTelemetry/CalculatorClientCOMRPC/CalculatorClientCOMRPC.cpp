@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 
     printf("*** Calculator using %s ***\n\n", callsign.c_str());
 
-    string config{ R"({"sampler":"ParentOn", "metrics": {"enabled" : false, "intervalMs" : 1000, "timeoutMs" : 2000}, "resources" : {"schemaURL" : "url", "attributes":[{"key":"1", "value":"V1"},{"key":"2", "value":"V2"}]}, "logger": {"loggerenabled" : true}, "componentname":"Thunder COMRPC test app","componentversion":"1.0.1"})" };
+    string config{ R"({"sampler":"ParentOn", "metrics": {"enabled" : false, "intervalms" : 1000, "timeoutms" : 2000}, "resources" : {"schemaURL" : "url", "attributes":[{"key":"1", "value":"V1"},{"key":"2", "value":"V2"}]}, "logger": {"loggerenabled" : true}, "componentname":"Thunder COMRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
     Core::OptionalType<Core::JSON::Error> error;
