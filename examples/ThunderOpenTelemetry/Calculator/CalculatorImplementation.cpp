@@ -21,7 +21,7 @@
 
 #include <interfaces/IMath.h>
 
-#include <opentelemetry/opentelemetry.h>
+#include <open_telemetry/open_telemetry.h>
 
 #include <algorithm>
 #include <vector>
@@ -40,7 +40,7 @@ namespace Plugin {
         ,_notifications()
         , _resultjob(*this)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder Calculator":"1.0.1"})" };
+            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder Calculator", "componentversion":"1.0.1"})" };
 
             Telemetry::OpenTelemetry::Config telemetryConfig;
             telemetryConfig.FromString(config);
@@ -55,6 +55,7 @@ namespace Plugin {
 
         ~CalculatorImplementation() override
         {
+            _resultjob.Revoke();
             Telemetry::OpenTelemetry::Instance().Deinitialize();
         }
 
@@ -153,8 +154,8 @@ namespace Plugin {
 
             void Dispatch() const
             {
-             	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Sending results");
                 Core::JobContext::Instance().TraceContextW3C() = _tracecontext;
+             	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Sending results");
                 {
                     Core::SafeSyncType<Core::CriticalSection> lock(_parent._adminLock);
                     for (auto* notification : _parent._notifications) {

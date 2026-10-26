@@ -24,7 +24,7 @@
 
 #include <interfaces/json/JMathExtended.h>
 
-#include <opentelemetry/opentelemetry.h>
+#include <open_telemetry/open_telemetry.h>
 
 #include <algorithm>
 #include <vector>
@@ -44,7 +44,7 @@ namespace Plugin {
             , _notifications()
             , _registeredfornotifications(false)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder CalculatorProxy":"1.0.1"})" };
+            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder CalculatorProxy","componentversion":"1.0.1"})" };
 
             Telemetry::OpenTelemetry::Config telemetryConfig;
             telemetryConfig.FromString(config);
@@ -193,6 +193,7 @@ namespace Plugin {
             Exchange::IMathExtended::INotification* internalnotification = _service->QueryInterface<Exchange::IMathExtended::INotification>();
             if(internalnotification != nullptr){
                 internalnotification->MultiplyResult(result);
+                internalnotification->Release();
             }
         }
 

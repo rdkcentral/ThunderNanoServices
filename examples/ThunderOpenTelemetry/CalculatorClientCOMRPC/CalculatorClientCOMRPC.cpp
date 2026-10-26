@@ -35,7 +35,7 @@
 #include <core/core.h>
 #include <interfaces/IMath.h>
 #include <plugins/plugins.h>
-#include <opentelemetry/opentelemetry.h>
+#include <open_telemetry/open_telemetry.h>
 
 #include <cerrno>
 #include <chrono>

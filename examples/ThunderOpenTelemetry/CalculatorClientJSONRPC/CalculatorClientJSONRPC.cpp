@@ -25,7 +25,7 @@
 #include <interfaces/json/JsonData_Math.h>
 #include <interfaces/json/JsonData_MathExtended.h>
 
-#include <opentelemetry/opentelemetry.h>
+#include <open_telemetry/open_telemetry.h>
 
 
 #include <chrono>
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
     std::printf("%u * %u = %u\n", A, B, product);
 
     Telemetry::OpenTelemetry::Instance().Deinitialize();
-    
+
     char c;
     std::cin >> c;
 
