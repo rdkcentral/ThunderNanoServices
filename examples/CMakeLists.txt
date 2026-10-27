@@ -40,7 +40,7 @@ option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
 option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" OFF)
-option(EXAMPLE_SIMPLERICHERROR "Include SimpleRichError example" ON)
+option(EXAMPLE_SIMPLERICHERROR "Include SimpleRichError example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
