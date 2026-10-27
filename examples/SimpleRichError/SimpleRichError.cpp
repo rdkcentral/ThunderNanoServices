@@ -35,6 +35,7 @@ namespace Plugin {
         , PluginHost::JSONRPC()
         , Example::ISimpleRichError()
         , _operational(false)
+        , _lock()
     {
     }
 
@@ -61,10 +62,16 @@ namespace Plugin {
     {
         Core::hresult result = Core::ERROR_NONE;
 
+        _lock.Lock();
+
         if (_operational == false) {
             _operational = true;
+
+            _lock.Unlock();
         }
         else {
+            _lock.Unlock();
+
             errorDetails = Core::ErrorDetails<void>();
             errorDetails.Value().message = _T("The coffee machine is already running");
             result = Core::ERROR_ILLEGAL_STATE;

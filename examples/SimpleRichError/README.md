@@ -20,5 +20,5 @@ Example requests:
 ```
 
 ```json
-{"jsonrpc":"2.0","id":2,"method":"SimpleRichError.1.makeCoffee","params":{"type":"cappucino"}}
+{"jsonrpc":"2.0","id":2,"method":"SimpleRichError.1.makeCoffee","params":{"type":"cappuccino"}}
 ```

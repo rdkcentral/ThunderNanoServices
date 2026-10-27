@@ -62,6 +62,7 @@ namespace Plugin {
             const string& info);
 
         bool _operational;
+        Core::CriticalSection _lock;
     };
 
 } // namespace Plugin
