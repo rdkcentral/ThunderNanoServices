@@ -2,7 +2,7 @@
 
 This plugin implements `Example::ISimpleRichError` and demonstrates how a method can return Thunder's framework error together with independently optional JSON-RPC error details.
 
-Build NanoServices with `PLUGIN_SIMPLERICHERROR=ON`. The plugin is activated by default with the `SimpleRichError` callsign.
+Build NanoServices with `EXAMPLE_SIMPLERICHERROR=ON`. The plugin is activated by default with the `SimpleRichError` callsign.
 
 ## Demonstrated responses
 
