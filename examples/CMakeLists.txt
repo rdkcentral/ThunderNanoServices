@@ -39,6 +39,7 @@ option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceTyp
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(EXAMPLE_GENERATORSHOWCASE_EXAMPLE "Include GeneratorShowCase example" OFF)
 option(EXAMPLE_CUSTOMCODE_EXAMPLE "Include Custom Code example" OFF)
+option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -105,3 +106,11 @@ if (EXAMPLE_CUSTOMCODE_EXAMPLE)
     add_subdirectory(CustomErrorCodes/CustomErrorCode)
     add_subdirectory(CustomErrorCodes/CustomCodeToStringLibrary)
 endif()
+
+if (EXAMPLE_THUNDER_OPEN_TELEMETRY)
+    add_subdirectory(ThunderOpenTelemetry/Calculator)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorProxy)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientCOMRPC)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientJSONRPC)
+endif()
+
