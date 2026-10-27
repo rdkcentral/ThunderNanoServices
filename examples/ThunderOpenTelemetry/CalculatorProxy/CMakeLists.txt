@@ -30,6 +30,7 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 set(PLUGIN_CALCULATORPROXY_STARTMODE "Activated" CACHE STRING "Automatically start CalculatorProxy")
 set(PLUGIN_CALCULATORPROXY_MODE "Local" CACHE STRING "Set CalculatorProxy process mode (use Container to run out of process)")
 
+ 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
 find_package(${NAMESPACE}OpenTelemetry REQUIRED)
@@ -40,9 +41,10 @@ add_library(${MODULE_NAME} SHARED
     CalculatorProxyImplementation.cpp
     Module.cpp)
 
-set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_STANDARD ${CXX_STD}
-    CXX_STANDARD_REQUIRED YES)
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE

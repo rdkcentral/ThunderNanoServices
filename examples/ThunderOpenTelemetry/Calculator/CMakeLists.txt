@@ -27,6 +27,7 @@ set(MODULE_NAME ${NAMESPACE}${PROJECT_NAME})
 
 message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
+
 set(PLUGIN_CALCULATOR_STARTMODE "Activated" CACHE STRING "Automatically start Calculator")
 set(PLUGIN_CALCULATOR_MODE "Local" CACHE STRING "Set Calculator process mode (use Container to run out of process)")
 
@@ -40,9 +41,10 @@ add_library(${MODULE_NAME} SHARED
     CalculatorImplementation.cpp
     Module.cpp)
 
-set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_STANDARD ${CXX_STD}
-    CXX_STANDARD_REQUIRED YES)
+ set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE

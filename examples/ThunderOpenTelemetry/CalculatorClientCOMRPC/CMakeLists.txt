@@ -35,9 +35,10 @@ find_package(CompileSettingsDebug CONFIG REQUIRED)
 add_executable(${MODULE_NAME}
     CalculatorClientCOMRPC.cpp)
 
-set_target_properties(${MODULE_NAME} PROPERTIES
-    CXX_STANDARD ${CXX_STD}
-    CXX_STANDARD_REQUIRED YES)
+ set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+)
 
 target_link_libraries(${MODULE_NAME}
     PRIVATE
