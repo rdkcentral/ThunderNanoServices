@@ -4,6 +4,10 @@
 * [JSONRPC]: Shows, the communication between plugin and standalone client using JSONRPC 
 * [FileTransfer]: Shows, how to read a file from server and store in the given path	
 * [OutOfProcess]: Shows, how to implement an OutOfProcess plugins
+* [Calculator]: Shows a Calculator plugin exposing IMath and IMathExtended through COM-RPC and JSON-RPC
+* [CalculatorProxy]: Shows how to forward IMath and IMathExtended calls and notifications to another plugin
+* [CalculatorClientCOMRPC]: Shows how to call CalculatorProxy through SmartInterfaceType and receive MultiplyResult notifications
+* [CalculatorClientJSONRPC]: Shows how to call CalculatorProxy through SmartLinkType and receive multiplyresult events
 * [StateController]: Shows, How to get state changes of a plugin
 * [ConfigUpdateExample]: Shows, how to store plugin config in persistent store/path
 * [IOConnector]: Shows, how to communicate with IOConnector plugin using JSONRPC as well as COMRPC
