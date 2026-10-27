@@ -25,6 +25,7 @@ project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(STORE_TEST "Utility to verify PersistentStore and Dictionary Plugin behaviour." OFF)
+option(PLUGIN_TESTPLUGINSMARTINTERFACE "Include PluginSmartInterfaceType lifecycle integration tests" OFF)
 option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by Automation Test Tools." OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
@@ -75,4 +76,8 @@ endif()
 
 if(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS)
     add_subdirectory(TestWholePluginOutOfProcess)
+endif()
+
+if(PLUGIN_TESTPLUGINSMARTINTERFACE)
+    add_subdirectory(TestPluginSmartInterface)
 endif()
