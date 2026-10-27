@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 
     JSONRPC::LinkType<Core::JSON::IElement> link(callsign);
     MultiplyNotification notification;
-    uint32_t result = link.Subscribe<JsonData::MathExtended::MultiplyResultParamsData>(WaitTime, _T("multiplyResult"), &MultiplyNotification::OnModified, &notification);
+    uint32_t result = link.Subscribe<JsonData::MathExtended::MultiplyResultParamsData>(WaitTime, _T("multiplyresult"), &MultiplyNotification::OnModified, &notification);
     if (result != Core::ERROR_NONE) {
         std::fprintf(stderr, "Subscription to multiply event failed: %u\n", result);
         return 1;
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     result = link.Invoke<JsonData::MathExtended::MultiplyParamsData, void>(WaitTime, _T("multiply"), parameters);
     if (result != Core::ERROR_NONE) {
         std::fprintf(stderr, "Multiply failed: %u\n", result);
-        link.Unsubscribe(WaitTime, _T("multiplyResult"));
+        link.Unsubscribe(WaitTime, _T("multiplyresult"));
         return 2;
     }
 
@@ -161,11 +161,11 @@ int main(int argc, char* argv[])
 
     if(notified == false) {
         std::fprintf(stderr, "Multiply result notification timed out\n");
-        link.Unsubscribe(WaitTime, _T("multiplyResult"));
+        link.Unsubscribe(WaitTime, _T("multiplyresult"));
         return 3;
     }
 
-    link.Unsubscribe(WaitTime, _T("multiplyResult"));
+    link.Unsubscribe(WaitTime, _T("multiplyresult"));
 
     std::printf("%u * %u = %u\n", A, B, product);
 
