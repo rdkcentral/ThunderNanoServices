@@ -19,7 +19,7 @@
 
 #include "SimpleRichError.h"
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     namespace {
@@ -33,7 +33,7 @@ namespace Plugin {
     SimpleRichError::SimpleRichError()
         : PluginHost::IPlugin()
         , PluginHost::JSONRPC()
-        , Example::ISimpleRichError()
+        , Exchange::ISimpleRichError()
         , _operational(false)
         , _lock()
     {
@@ -43,13 +43,13 @@ namespace Plugin {
 
     const string SimpleRichError::Initialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        Example::JSimpleRichError::Register(*this, this);
+        Exchange::JSimpleRichError::Register(*this, this);
         return (string());
     }
 
     void SimpleRichError::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
-        Example::JSimpleRichError::Unregister(*this);
+        Exchange::JSimpleRichError::Unregister(*this);
         _operational = false;
     }
 
@@ -80,26 +80,26 @@ namespace Plugin {
         return (result);
     }
 
-    Core::hresult SimpleRichError::MakeCoffee(const Example::ISimpleRichError::coffeetype& type, uint16_t& duration, Core::OptionalType<Example::ISimpleRichError::Error>& errorDetails)
+    Core::hresult SimpleRichError::MakeCoffee(const Exchange::ISimpleRichError::coffeetype& type, uint16_t& duration, Core::OptionalType<Exchange::ISimpleRichError::Error>& errorDetails)
     {
         Core::hresult result = Core::ERROR_NONE;
         duration = 0;
 
         if (_operational == false) {
-            Example::ISimpleRichError::Error& details(SetDiagnostic(errorDetails, Example::ISimpleRichError::Diagnostic::HARDWARE_FAILURE, 20, 100, 0, _T("Restart the machine before making coffee")));
+            Exchange::ISimpleRichError::Error& details(SetDiagnostic(errorDetails, Exchange::ISimpleRichError::Diagnostic::HARDWARE_FAILURE, 20, 100, 0, _T("Restart the machine before making coffee")));
             details.code = -32050;
             details.message = _T("Coffee machine is not running");
             result = Core::ERROR_ILLEGAL_STATE;
         }
-        else if (type == Example::ISimpleRichError::ESPRESSO) {
+        else if (type == Exchange::ISimpleRichError::ESPRESSO) {
             duration = 25;
         }
-        else if (type == Example::ISimpleRichError::CAPPUCCINO) {
-            SetDiagnostic(errorDetails, Example::ISimpleRichError::Diagnostic::NO_WATER, 88, 0, 2, _T("Refill the water tank"));
+        else if (type == Exchange::ISimpleRichError::CAPPUCCINO) {
+            SetDiagnostic(errorDetails, Exchange::ISimpleRichError::Diagnostic::NO_WATER, 88, 0, 2, _T("Refill the water tank"));
             result = Core::ERROR_UNAVAILABLE;
         }
-        else if (type == Example::ISimpleRichError::LATTE) {
-            Example::ISimpleRichError::Error& details(SetDiagnostic(errorDetails, Example::ISimpleRichError::Diagnostic::NO_MILK, 92, 80, 9, _T("Refill the milk reservoir")));
+        else if (type == Exchange::ISimpleRichError::LATTE) {
+            Exchange::ISimpleRichError::Error& details(SetDiagnostic(errorDetails, Exchange::ISimpleRichError::Diagnostic::NO_MILK, 92, 80, 9, _T("Refill the milk reservoir")));
             details.message = _T("Unable to prepare latte");
             result = Core::ERROR_UNAVAILABLE;
         }
@@ -110,26 +110,26 @@ namespace Plugin {
         return (result);
     }
 
-    Example::ISimpleRichError::Error& SimpleRichError::SetDiagnostic(
-        Core::OptionalType<Example::ISimpleRichError::Error>& errorDetails,
-        const Example::ISimpleRichError::Diagnostic::failreason reason,
+    Exchange::ISimpleRichError::Error& SimpleRichError::SetDiagnostic(
+        Core::OptionalType<Exchange::ISimpleRichError::Error>& errorDetails,
+        const Exchange::ISimpleRichError::Diagnostic::failreason reason,
         const uint8_t temperature,
         const uint8_t level,
         const uint8_t pressure,
         const string& info)
     {
-        Example::ISimpleRichError::Diagnostic diagnostic;
+        Exchange::ISimpleRichError::Diagnostic diagnostic;
         diagnostic.reason = reason;
         diagnostic.water_temperature = temperature;
         diagnostic.water_level = level;
         diagnostic.brew_pressure = pressure;
         diagnostic.info = info;
 
-        errorDetails = Example::ISimpleRichError::Error();
+        errorDetails = Exchange::ISimpleRichError::Error();
         errorDetails.Value().data = diagnostic;
 
         return (errorDetails.Value());
     }
 
 } // namespace Plugin
-} // namespace Thunder
+}

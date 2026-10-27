@@ -21,15 +21,15 @@
 
 #include "Module.h"
 
-#include <example_interfaces/ISimpleRichError.h>
-#include <example_interfaces/json/JSimpleRichError.h>
+#include <interfaces/ISimpleRichError.h>
+#include <interfaces/json/JSimpleRichError.h>
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     class SimpleRichError : public PluginHost::IPlugin
                           , public PluginHost::JSONRPC
-                          , public Example::ISimpleRichError {
+                          , public Exchange::ISimpleRichError {
     public:
         SimpleRichError();
         ~SimpleRichError() override;
@@ -44,18 +44,18 @@ namespace Plugin {
         string Information() const override;
 
         Core::hresult Restart(Core::OptionalType<Core::ErrorDetails<void>>& errorDetails) override;
-        Core::hresult MakeCoffee(const Example::ISimpleRichError::coffeetype& type, uint16_t& duration, Core::OptionalType<Example::ISimpleRichError::Error>& errorDetails) override;
+        Core::hresult MakeCoffee(const Exchange::ISimpleRichError::coffeetype& type, uint16_t& duration, Core::OptionalType<Exchange::ISimpleRichError::Error>& errorDetails) override;
 
         BEGIN_INTERFACE_MAP(SimpleRichError)
             INTERFACE_ENTRY(PluginHost::IPlugin)
             INTERFACE_ENTRY(PluginHost::IDispatcher)
-            INTERFACE_ENTRY(Example::ISimpleRichError)
+            INTERFACE_ENTRY(Exchange::ISimpleRichError)
         END_INTERFACE_MAP
 
     private:
-        static Example::ISimpleRichError::Error& SetDiagnostic(
-            Core::OptionalType<Example::ISimpleRichError::Error>& errorDetails,
-            const Example::ISimpleRichError::Diagnostic::failreason reason,
+        static Exchange::ISimpleRichError::Error& SetDiagnostic(
+            Core::OptionalType<Exchange::ISimpleRichError::Error>& errorDetails,
+            const Exchange::ISimpleRichError::Diagnostic::failreason reason,
             const uint8_t temperature,
             const uint8_t level,
             const uint8_t pressure,
@@ -66,4 +66,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace Thunder
+}
