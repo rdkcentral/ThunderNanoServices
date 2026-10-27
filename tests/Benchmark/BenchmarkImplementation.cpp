@@ -18,118 +18,28 @@
  */
 
 #include "Module.h"
-#include <qa_interfaces/IBenchmark.h>
 #include <qa_interfaces/IBenchmarkPayload.h>
 
-#include <algorithm>
 #include <vector>
 
 namespace Thunder {
 namespace Plugin {
 
     class BenchmarkImplementation
-        : public QualityAssurance::IBenchmark
-        , public QualityAssurance::IBenchmarkPayload {
+        : public QualityAssurance::IBenchmarkPayload {
     public:
         BenchmarkImplementation(const BenchmarkImplementation&) = delete;
         BenchmarkImplementation& operator=(const BenchmarkImplementation&) = delete;
         BenchmarkImplementation(BenchmarkImplementation&&) = delete;
         BenchmarkImplementation& operator=(BenchmarkImplementation&&) = delete;
 
-        BenchmarkImplementation()
-            : _adminLock()
-            , _notifications()
-        {
-        }
+        BenchmarkImplementation() = default;
 
         ~BenchmarkImplementation() override = default;
 
         BEGIN_INTERFACE_MAP(BenchmarkImplementation)
-            INTERFACE_ENTRY(QualityAssurance::IBenchmark)
             INTERFACE_ENTRY(QualityAssurance::IBenchmarkPayload)
         END_INTERFACE_MAP
-
-        // -------------------------------------------------------------------
-        // IBenchmark
-        // -------------------------------------------------------------------
-
-        Core::hresult Trigger(const uint32_t iterations) override
-        {
-            // Measurement is performed on the plugin shell side via the IBenchmarkPayload COM-RPC proxy.
-            // This method is retained for interface compliance and notification forwarding.
-            _adminLock.Lock();
-            std::vector<IBenchmark::INotification*> sinks(_notifications);
-            for (auto* sink : sinks) {
-                sink->AddRef();
-            }
-            _adminLock.Unlock();
-
-            for (auto* sink : sinks) {
-                sink->PerformanceCheckCompleted();
-                sink->Release();
-            }
-
-            TRACE(Trace::Information, (_T("Benchmark Trigger called: %u iterations (measurement on shell side)"), iterations));
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult CollectData(IBenchmarkResultIterator*& report) const override
-        {
-            // Results are stored on the plugin shell side.
-            std::vector<BenchmarkResult> empty;
-            using Iterator = RPC::IteratorType<IBenchmarkResultIterator>;
-            report = Core::ServiceType<Iterator>::Create<IBenchmarkResultIterator>(empty);
-
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult Register(IBenchmark::INotification* sink) override
-        {
-            _adminLock.Lock();
-            auto it = std::find(_notifications.begin(), _notifications.end(), sink);
-            if (it == _notifications.end()) {
-                _notifications.push_back(sink);
-                sink->AddRef();
-            }
-            _adminLock.Unlock();
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult Unregister(IBenchmark::INotification* sink) override
-        {
-            _adminLock.Lock();
-            auto it = std::find(_notifications.begin(), _notifications.end(), sink);
-            if (it != _notifications.end()) {
-                (*it)->Release();
-                _notifications.erase(it);
-            }
-            _adminLock.Unlock();
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult LatencyThreshold(const uint32_t /* maxLatencyDeviationPct */) override
-        {
-            // Thresholds are managed on the plugin shell side.
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult LatencyThreshold(uint32_t& maxLatencyDeviationPct) const override
-        {
-            maxLatencyDeviationPct = 0;
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult MemoryThreshold(const uint64_t /* maxMemoryGrowthBytes */) override
-        {
-            // Thresholds are managed on the plugin shell side.
-            return Core::ERROR_NONE;
-        }
-
-        Core::hresult MemoryThreshold(uint64_t& maxMemoryGrowthBytes) const override
-        {
-            maxMemoryGrowthBytes = 0;
-            return Core::ERROR_NONE;
-        }
 
         // -------------------------------------------------------------------
         // IBenchmarkPayload — echo/loopback endpoints for COM-RPC measurement
@@ -238,9 +148,6 @@ namespace Plugin {
             return Core::ERROR_NONE;
         }
 
-    private:
-        mutable Core::CriticalSection _adminLock;
-        std::vector<IBenchmark::INotification*> _notifications;
     };
 
     SERVICE_REGISTRATION(BenchmarkImplementation, 1, 0)
