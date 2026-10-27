@@ -39,6 +39,7 @@ option(EXAMPLE_DYNAMICLOADING "Include dynamic loading examples" OFF)
 option(EXAMPLE_SIMPLECOMRPC_TEST "Include Simple COMRPC test client" OFF)
 option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMessage example" OFF)
 option(EXAMPLE_PLUGINSMARTINTERFACETYPE_EXAMPLE "Include PluginSmartInterfaceType examples" OFF)
+option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -101,5 +102,13 @@ endif()
 
 if (EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE)
     add_subdirectory(DynamicJSONRPCErrorMessage)
+endif()
+
+
+if (EXAMPLE_THUNDER_OPEN_TELEMETRY)
+    add_subdirectory(ThunderOpenTelemetry/Calculator)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorProxy)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientCOMRPC)
+    add_subdirectory(ThunderOpenTelemetry/CalculatorClientJSONRPC)
 endif()
 
