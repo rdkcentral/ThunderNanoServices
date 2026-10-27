@@ -1,0 +1,8 @@
+startmode = "@PLUGIN_TESTDELEGATEDRELEASE_STARTMODE@"
+resumed = "@PLUGIN_TESTDELEGATEDRELEASE_RESUMED@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_TESTDELEGATEDRELEASE_MODE@")
+configuration.add("root", root)
