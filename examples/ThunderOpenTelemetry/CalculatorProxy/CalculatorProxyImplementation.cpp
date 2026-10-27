@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     class CalculatorProxyImplementation : public Exchange::IMath
@@ -214,4 +214,4 @@ namespace Plugin {
     SERVICE_REGISTRATION(CalculatorProxyImplementation, 1, 0)
 
 } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework

@@ -36,7 +36,7 @@
 namespace 
 {
 
-    using namespace Thunder;
+    using namespace WPEFramework;
 
     constexpr uint32_t WaitTime = 5000;
 

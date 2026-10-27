@@ -34,7 +34,7 @@
 
 #include <interfaces/IMath.h>
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     class Calculator : public PluginHost::IPlugin
@@ -91,4 +91,4 @@ namespace Plugin {
     };
 
 } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework

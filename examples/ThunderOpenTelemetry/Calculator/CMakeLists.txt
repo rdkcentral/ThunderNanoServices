@@ -19,7 +19,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(Calculator)
 
-find_package(Thunder)
+find_package(WPEFramework)
 
 project_version(1.0.0)
 

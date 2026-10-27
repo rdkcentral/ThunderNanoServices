@@ -49,7 +49,7 @@ MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace {
 
-    using namespace Thunder;
+    using namespace WPEFramework;
 
     class CalculatorExtendedClientCOMRPC : private RPC::SmartInterfaceType<Exchange::IMathExtended> {
     private:
@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 
     CalculatorExtendedClientCOMRPC client;
     uint32_t result = client.Open(callsign);
-    if (result != Thunder::Core::ERROR_NONE) {
+    if (result != WPEFramework::Core::ERROR_NONE) {
         std::fprintf(stderr, "Failed to connect to %s: %u\n", callsign.c_str(), result);
         return 5;
     }
@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
     (*span)->SetAttribute("Multiply","20x20");
 
     result = client.Multiply(20, 20);
-    if (result != Thunder::Core::ERROR_NONE) {
+    if (result != WPEFramework::Core::ERROR_NONE) {
         std::fprintf(stderr, "Multiply failed: %u\n", result);
         return 6;
     }

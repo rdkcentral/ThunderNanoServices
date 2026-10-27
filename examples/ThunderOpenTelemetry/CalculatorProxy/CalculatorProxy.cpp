@@ -23,7 +23,7 @@
 #include <interfaces/json/JMath.h>
 #include <interfaces/json/JMathExtended.h>
 
-namespace Thunder {
+namespace WPEFramework {
 namespace Plugin {
 
     namespace {
@@ -130,4 +130,4 @@ namespace Plugin {
     }
 
 } // namespace Plugin
-} // namespace Thunder
+} // namespace WPEFramework
