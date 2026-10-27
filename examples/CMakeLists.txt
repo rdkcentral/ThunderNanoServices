@@ -40,6 +40,7 @@ option(EXAMPLE_DYNAMICJSONRPCERRORMESSAGE_EXAMPLE "Include DynamicJSONRPCErrorMe
 option(EXAMPLE_GENERATORSHOWCASE_EXAMPLE "Include GeneratorShowCase example" OFF)
 option(EXAMPLE_CUSTOMCODE_EXAMPLE "Include Custom Code example" OFF)
 option(EXAMPLE_THUNDER_OPEN_TELEMETRY "Include Thunder Open Telemetry example" OFF)
+option(EXAMPLE_SIMPLERICHERROR "Include SimpleRichError example" OFF)
 
 if(EXAMPLE_COMRPCCLIENT)
     add_subdirectory(COMRPCClient)
@@ -114,3 +115,6 @@ if (EXAMPLE_THUNDER_OPEN_TELEMETRY)
     add_subdirectory(ThunderOpenTelemetry/CalculatorClientJSONRPC)
 endif()
 
+if (EXAMPLE_SIMPLERICHERROR)
+    add_subdirectory(SimpleRichError)
+endif()
