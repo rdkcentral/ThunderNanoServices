@@ -90,6 +90,7 @@ namespace Plugin {
                 RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
                 const uint32_t result = _math->Release();
                 ASSERT((result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
+                (void)result;
                 _math = nullptr;
 
                 if (connection != nullptr) {
