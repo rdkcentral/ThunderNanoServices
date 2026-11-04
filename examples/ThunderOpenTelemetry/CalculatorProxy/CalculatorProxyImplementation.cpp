@@ -44,7 +44,7 @@ namespace Plugin {
             , _notifications()
             , _registeredfornotifications(false)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder CalculatorProxy","componentversion":"1.0.1"})" };
+            string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true},"componentname":"Thunder CalculatorProxy","componentversion":"1.0.1"})" };
 
             Telemetry::OpenTelemetry::Config telemetryConfig;
             telemetryConfig.FromString(config);
