@@ -69,7 +69,7 @@ namespace Plugin {
         return message;
     }
 
-    void Calculator::Deinitialize(PluginHost::IShell*)
+    void Calculator::Deinitialize(PluginHost::IShell* service VARIABLE_IS_NOT_USED)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
