@@ -25,7 +25,7 @@ project_version(1.0.0)
 message("Setup ${PROJECT_NAME} v${PROJECT_VERSION}")
 
 option(STORE_TEST "Utility to verify PersistentStore and Dictionary Plugin behaviour." OFF)
-option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by Automation Test Tools." ON)
+option(TEST_AUTOMATION_TOOLS "Utility to verify Thunder functions trigerred by Automation Test Tools." OFF)
 option(PLUGIN_TESTCONTROLLER "Include TestController plugin" OFF)
 option(PLUGIN_TESTUTILITY "Include TestUtility plugin" OFF)
 option(PLUGIN_TESTTEXTOPTIONS "Utility to verify the name of JSONRPC functions" OFF)
