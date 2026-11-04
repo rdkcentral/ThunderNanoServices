@@ -1,0 +1,7 @@
+startmode = "@PLUGIN_SLIMOOP_STARTMODE@"
+
+configuration = JSON()
+
+root = JSON()
+root.add("mode", "@PLUGIN_SLIMOOP_MODE@")
+configuration.add("root", root)
