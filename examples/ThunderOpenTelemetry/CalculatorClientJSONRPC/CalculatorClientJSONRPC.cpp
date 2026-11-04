@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         callsign = argv[1];
     }
 
-    string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true}, "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
+    string config{ R"({"sampler":"ParentOn","exporter" : "Http", "tracerendpoint" : "127.0.0.1:4318/v1/traces", "logger" : {"enabled" : true, "endpoint" : "127.0.0.1:4318/v1/logs"} , "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
     telemetryConfig.FromString(config);
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
 #ifdef __WINDOWS__
         Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:25555"));
 #else
-        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:80"));
+        Core::SystemInfo::SetEnvironment(_T("THUNDER_ACCESS"), _T("127.0.0.1:9998"));
 #endif
     }
 

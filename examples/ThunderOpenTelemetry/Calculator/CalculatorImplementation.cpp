@@ -40,7 +40,7 @@ namespace Plugin {
         ,_notifications()
         , _resultjob(*this)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true},"componentname":"Thunder Calculator", "componentversion":"1.0.1"})" };
+            string config{ R"({"sampler":"ParentOn", "exporter" : "Http", "tracerendpoint" : "127.0.0.1:4318/v1/traces", "logger" : {"enabled" : true, "endpoint" : "127.0.0.1:4318/v1/logs"},"componentname":"Thunder Calculator", "componentversion":"1.0.1"})" };
 
             Telemetry::OpenTelemetry::Config telemetryConfig;
             telemetryConfig.FromString(config);
