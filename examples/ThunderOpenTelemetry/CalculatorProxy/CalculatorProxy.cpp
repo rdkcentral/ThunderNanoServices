@@ -73,7 +73,7 @@ namespace Plugin {
         return message;
     }
 
-    void CalculatorProxy::Deinitialize(PluginHost::IShell* service)
+    void CalculatorProxy::Deinitialize(PluginHost::IShell*)
     {
         if (_service != nullptr) {
             ASSERT(_service == service);
@@ -88,7 +88,7 @@ namespace Plugin {
                 Exchange::JMath::Unregister(*this);
 
                 RPC::IRemoteConnection* connection = _service->RemoteConnection(_connectionId);
-                const uint32_t result = _math->Release();
+                VARIABLE_IS_NOT_USED const uint32_t result = _math->Release();
                 ASSERT((result == Core::ERROR_CONNECTION_CLOSED) || (result == Core::ERROR_DESTRUCTION_SUCCEEDED));
                 _math = nullptr;
 
