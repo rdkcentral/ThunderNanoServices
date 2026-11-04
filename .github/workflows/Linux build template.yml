@@ -5,6 +5,12 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      source-repository:
+        description: Repository containing the ThunderNanoServices source
+        required: false
+        type: string
+        default: rdkcentral/ThunderNanoServices
 
 jobs:
   ThunderNanoServices:
@@ -43,11 +49,31 @@ jobs:
         rm ${{matrix.build_type}}/${{matrix.build_type}}${{matrix.architecture == '32' && '_x86' || ''}}.tar.gz
 
 # ----- Regex & checkout -----
+    - name: Resolve release dependency branch
+      id: release
+      shell: bash
+      env:
+        BUILD_BRANCH: ${{ github.base_ref || github.ref_name }}
+        REF_TYPE: ${{ github.ref_type }}
+      run: |
+        release_ref=
+        if [[ "$REF_TYPE" == 'branch' && "$BUILD_BRANCH" == R* ]]; then
+          release_ref="refs/heads/$BUILD_BRANCH"
+        fi
+        echo "ref=$release_ref" >> "$GITHUB_OUTPUT"
+        echo "Dependency branch: ${release_ref:-repository default}"
+
     - name: Checkout ThunderNanoServices
       uses: actions/checkout@v5
       with:
         path: ThunderNanoServices
-        repository: ${{github.repository_owner}}/ThunderNanoServices
+        repository: ${{ inputs.source-repository }}
+        ref: ${{ github.repository != inputs.source-repository && steps.release.outputs.ref || '' }}
+
+    - name: Log source revisions
+      shell: bash
+      run: |
+        git -C ThunderNanoServices log -1 --format='ThunderNanoServices: %H'
 
     - name: Regex ThunderNanoServices
       if: contains(github.event.pull_request.body, '[Options:')

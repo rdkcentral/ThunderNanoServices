@@ -10,9 +10,9 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: ["master"]
+    branches: ["master", "R*"]
   pull_request:
-    branches: ["master"]
+    branches: ["master", "R*"]
 
 jobs:
   Thunder:
@@ -25,3 +25,5 @@ jobs:
   ThunderNanoServices:
     needs: ThunderInterfaces
     uses: ./.github/workflows/Linux build template.yml
+    with:
+      source-repository: ${{ github.repository }}
