@@ -1,0 +1,57 @@
+# If not stated otherwise in this file or this component's LICENSE file the
+# following copyright and licenses apply:
+#
+# Copyright 2026 Metrological
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set(TARGET PluginSmartInterfaceIntegrationTests)
+
+add_executable(${TARGET}
+    PluginSmartInterfaceTestSuite.cpp
+    Module.cpp)
+
+add_dependencies(${TARGET}
+    ${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}
+    ${TEST_PLUGINSMARTINTERFACE_CONSUMER_TARGET})
+
+target_compile_definitions(${TARGET}
+    PRIVATE
+        MODULE_NAME=PluginSmartInterfaceTestSuite
+        TEST_SMART_PROVIDER_CALLSIGN="TestSmartProvider"
+        TEST_SMART_CONSUMER_CALLSIGN="TestSmartConsumer"
+        TEST_SMART_PROVIDER_CLASSNAME="TestSmartProvider"
+        TEST_SMART_CONSUMER_CLASSNAME="TestSmartConsumer"
+        TEST_SMART_PROVIDER_LOCATOR="$<TARGET_FILE_NAME:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>"
+        TEST_SMART_CONSUMER_LOCATOR="$<TARGET_FILE_NAME:${TEST_PLUGINSMARTINTERFACE_CONSUMER_TARGET}>"
+        TEST_SMART_PLUGIN_PATH="$<TARGET_FILE_DIR:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>"
+        TEST_SMART_PROXY_STUB_PATH="${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs")
+
+if(BUILD_REFERENCE)
+    target_compile_definitions(${TARGET} PRIVATE BUILD_REFERENCE=${BUILD_REFERENCE})
+endif()
+
+target_link_libraries(${TARGET}
+    PRIVATE
+        thunder_test_support::thunder_test_support
+        GTest::gtest
+        GTest::gtest_main)
+
+set_target_properties(${TARGET} PROPERTIES
+    CXX_STANDARD ${CXX_STD}
+    CXX_STANDARD_REQUIRED YES)
+
+add_test(NAME ${TARGET} COMMAND ${TARGET})
+set_tests_properties(${TARGET} PROPERTIES
+    ENVIRONMENT
+        "PATH=${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}:$ENV{PATH};LD_LIBRARY_PATH=${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/proxystubs:$<TARGET_FILE_DIR:${TEST_PLUGINSMARTINTERFACE_PROVIDER_TARGET}>:$ENV{LD_LIBRARY_PATH}")
