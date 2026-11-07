@@ -34,6 +34,7 @@ option(PLUGIN_TESTPLUGIN "Minimal plugin for test_support validation (COM-RPC + 
 option(PLUGIN_BENCHMARK "Include Benchmark plugin for COM-RPC performance measurement and regression detection" OFF)
 option(PLUGIN_TESTSTATECONTROL "Include TestStateControl plugin" OFF)
 option(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS "Include TestWholePluginOutOfProcess plugin" OFF)
+option(PLUGIN_PRIVATECOMRPCTEST "Include PrivateComRPCTest plugin" OFF)
 
 if(STORE_TEST)
     add_subdirectory(StoreTest)
@@ -75,4 +76,8 @@ endif()
 
 if(PLUGIN_TESTWHOLEPLUGINOUTOFPROCESS)
     add_subdirectory(TestWholePluginOutOfProcess)
+endif()
+
+if(PLUGIN_PRIVATECOMRPCTEST)
+    add_subdirectory(PrivateComRPC)
 endif()
