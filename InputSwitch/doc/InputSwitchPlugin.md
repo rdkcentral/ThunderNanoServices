@@ -1,34 +1,36 @@
 <!-- Generated automatically, DO NOT EDIT! -->
-<a name="head.Input_Switch_API"></a>
-# Input Switch API
+<a id="head_Input_Switch_Plugin"></a>
+# Input Switch Plugin
 
 **Version: 1.0**
 
-**Status: :black_circle::white_circle::white_circle:**
+**Status: :black_circle::black_circle::black_circle:**
 
 InputSwitch plugin for Thunder framework.
 
 ### Table of Contents
 
-- [Introduction](#head.Introduction)
-- [Description](#head.Description)
-- [Configuration](#head.Configuration)
-- [Methods](#head.Methods)
+- [Introduction](#head_Introduction)
+- [Description](#head_Description)
+- [Configuration](#head_Configuration)
+- [Interfaces](#head_Interfaces)
+- [Methods](#head_Methods)
+- [Properties](#head_Properties)
 
-<a name="head.Introduction"></a>
+<a id="head_Introduction"></a>
 # Introduction
 
-<a name="head.Scope"></a>
+<a id="head_Scope"></a>
 ## Scope
 
-This document describes purpose and functionality of the InputSwitch plugin. It includes detailed specification of its configuration and methods provided.
+This document describes purpose and functionality of the InputSwitch plugin. It includes detailed specification about its configuration, methods and properties provided.
 
-<a name="head.Case_Sensitivity"></a>
+<a id="head_Case_Sensitivity"></a>
 ## Case Sensitivity
 
-All identifiers on the interface described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
+All identifiers of the interfaces described in this document are case-sensitive. Thus, unless stated otherwise, all keywords, entities, properties, relations and actions should be treated as such.
 
-<a name="head.Acronyms,_Abbreviations_and_Terms"></a>
+<a id="head_Acronyms,_Abbreviations_and_Terms"></a>
 ## Acronyms, Abbreviations and Terms
 
 The table below provides and overview of acronyms used in this document and their definitions.
@@ -46,7 +48,7 @@ The table below provides and overview of terms and abbreviations used in this do
 | :-------- | :-------- |
 | <a name="term.callsign">callsign</a> | The name given to an instance of a plugin. One plugin can be instantiated multiple times, but each instance the instance name, callsign, must be unique. |
 
-<a name="head.References"></a>
+<a id="head_References"></a>
 ## References
 
 | Ref ID | Description |
@@ -56,24 +58,34 @@ The table below provides and overview of terms and abbreviations used in this do
 | <a name="ref.JSON">[JSON](http://www.json.org/)</a> | JSON specification |
 | <a name="ref.Thunder">[Thunder](https://github.com/WebPlatformForEmbedded/Thunder/blob/master/doc/WPE%20-%20API%20-%20Thunder.docx)</a> | Thunder API Reference |
 
-<a name="head.Description"></a>
+<a id="head_Description"></a>
 # Description
 
-InputSwitch JSON-RPC interface
+The InputSwitch plugin allows switching between different input sources.
 
 The plugin is designed to be loaded and executed within the Thunder framework. For more information about the framework refer to [[Thunder](#ref.Thunder)].
 
-<a name="head.Configuration"></a>
+<a id="head_Configuration"></a>
 # Configuration
 
 The table below lists configuration options of the plugin.
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| classname | string | Class name: *InputSwitch* |
-| startmode | string | Determines if the plugin shall be started automatically along with the framework |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| callsign | string | mandatory | Plugin instance name (default: *InputSwitch*) |
+| classname | string | mandatory | Class name: *InputSwitch* |
+| locator | string | mandatory | Library name: *libWPEInputSwitch.so* |
+| startmode | string | mandatory | Determines in which state the plugin should be moved to at startup of the framework |
 
-<a name="head.Methods"></a>
+<a id="head_Interfaces"></a>
+# Interfaces
+
+This plugin implements the following interfaces:
+
+- IInputSwitch ([IInputSwitch.h](https://github.com/rdkcentral/ThunderInterfaces/blob/master/interfaces/IInputSwitch.h)) (version 1.0.0) (compliant format)
+> This interface uses legacy ```lowercase``` naming convention. With the next major release the naming convention will change to ```camelCase```.
+
+<a id="head_Methods"></a>
 # Methods
 
 The following methods are provided by the InputSwitch plugin:
@@ -82,34 +94,82 @@ InputSwitch interface methods:
 
 | Method | Description |
 | :-------- | :-------- |
-| [channel](#method.channel) | Enable or Disable the throughput through the given channel |
-| [select](#method.select) | Enable the given channel, disabling all othe channels, whish are not immune |
-| [status](#method.status) | Check the status of the requested channel |
+| [select](#method_select) | Enable the given channel, disabling all other not immune channels |
+| [channel](#method_channel) | Enable or Disable the throughput through the given channel |
 
-<a name="method.channel"></a>
-## *channel <sup>method</sup>*
+<a id="method_select"></a>
+## *select [<sup>method</sup>](#head_Methods)*
+
+Enable the given channel, disabling all other not immune channels.
+
+### Parameters
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.name | string | mandatory | Callsign that is the owner of this channel |
+
+### Result
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
+
+### Errors
+
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Failed to find a channel with the given name |
+
+### Example
+
+#### Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "InputSwitch.1.select",
+  "params": {
+    "name": "WebKitBrowser"
+  }
+}
+```
+
+#### Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
+}
+```
+
+<a id="method_channel"></a>
+## *channel [<sup>method</sup>](#head_Methods)*
 
 Enable or Disable the throughput through the given channel.
 
 ### Parameters
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.name | string | Callsign that is the owner of this channel |
-| params.enabled | boolean | Enable or disable the throughput of data through this channel |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| params | object | mandatory | *...* |
+| params.name | string | mandatory | Callsign that is the owner of this channel |
+| params.enabled | boolean | mandatory | Enable or disable the throughput of data through this channel |
 
 ### Result
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| result | null | mandatory | Always null |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Failed to scan |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Failed to find a channel with the given name |
 
 ### Example
 
@@ -117,123 +177,91 @@ Enable or Disable the throughput through the given channel.
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "InputSwitch.1.channel",
-    "params": {
-        "name": "WebKitBrowser",
-        "enabled": false
-    }
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "InputSwitch.1.channel",
+  "params": {
+    "name": "WebKitBrowser",
+    "enabled": true
+  }
 }
 ```
+
 #### Response
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": null
 }
 ```
-<a name="method.select"></a>
-## *select <sup>method</sup>*
 
-Enable the given channel, disabling all othe channels, whish are not immune.
+<a id="head_Properties"></a>
+# Properties
 
-### Parameters
+The following properties are provided by the InputSwitch plugin:
 
-| Name | Type | Description |
+InputSwitch interface properties:
+
+| Property | R/W | Description |
 | :-------- | :-------- | :-------- |
-| params | object |  |
-| params.name | string | Callsign that is the owner of this channel |
+| [status](#property_status) | read-only | Check the status of the requested channel |
 
-### Result
+<a id="property_status"></a>
+## *status [<sup>property</sup>](#head_Properties)*
 
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | null | Always null |
+Provides access to the check the status of the requested channel.
+
+> This property is **read-only**.
+
+> The *name* parameter shall be passed as the index to the property, i.e. ``status@<name>``.
+
+### Index
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| name | string | mandatory | Server name, if omitted, status of all configured channels is returned |
+
+### Value
+
+| Name | Type | M/O | Description |
+| :-------- | :-------- | :-------- | :-------- |
+| (property) | array | mandatory | Check the status of the requested channel *(if only one element is present then the array will be omitted)* |
+| (property)[#] | object | mandatory | *...* |
+| (property)[#].name | string | mandatory | Callsign associated with this channel |
+| (property)[#].enabled | boolean | mandatory | Is the channel enabled to receive info |
 
 ### Errors
 
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Failed to scan |
+| Message | Description |
+| :-------- | :-------- |
+| ```ERROR_UNKNOWN_KEY``` | Could not find the designated channel |
 
 ### Example
 
-#### Request
+#### Get Request
 
 ```json
 {
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "InputSwitch.1.select",
-    "params": {
-        "name": "WebKitBrowser"
+  "jsonrpc": "2.0",
+  "id": 42,
+  "method": "InputSwitch.1.status@WebKitBrowser"
+}
+```
+
+#### Get Response
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 42,
+  "result": [
+    {
+      "name": "WebKitBrowser",
+      "enabled": true
     }
+  ]
 }
 ```
-#### Response
 
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": null
-}
-```
-<a name="method.status"></a>
-## *status <sup>method</sup>*
-
-Check the status of the requested channel.
-
-### Parameters
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| params | object |  |
-| params.name | string | Callsign that is the owner of this channel |
-
-### Result
-
-| Name | Type | Description |
-| :-------- | :-------- | :-------- |
-| result | array |  |
-| result[#] | object |  |
-| result[#].name | string | Callsign associated with this channel |
-| result[#].enabled | boolean | Is the channel enabled to receive info |
-
-### Errors
-
-| Code | Message | Description |
-| :-------- | :-------- | :-------- |
-| 22 | ```ERROR_UNKNOWN_KEY``` | Could not find the designated channel |
-
-### Example
-
-#### Request
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "method": "InputSwitch.1.status",
-    "params": {
-        "name": "WebKitBrowser"
-    }
-}
-```
-#### Response
-
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1234567890,
-    "result": [
-        {
-            "name": "WebKitBrowser",
-            "enabled": false
-        }
-    ]
-}
-```
