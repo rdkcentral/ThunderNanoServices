@@ -43,6 +43,7 @@ if(TEST_AUTOMATION_TOOLS)
     add_subdirectory(TestAutomationComRpc)
     add_subdirectory(TestAutomationMemory)
     add_subdirectory(TestAutomationUtils)
+    add_subdirectory(SlimOOP)
 endif()
 
 if(PLUGIN_TESTCONTROLLER)
