@@ -56,6 +56,7 @@ namespace Plugin {
             message = _T("Couldn't create instance of implTestTextOptions");
         } else {
             QualityAssurance::JTestTextOptions::Register(*this, _implTestTextOptions);
+            _implTestTextOptions->Register(&_notification);
             _implTestLegacy = _implTestTextOptions->QueryInterface<QualityAssurance::ITestTextOptions::ITestLegacy>();
             if (_implTestLegacy == nullptr) {
                 message = _T("Couldn't create instance of _implITestLegacy");
@@ -87,6 +88,7 @@ namespace Plugin {
         
         if (_implTestTextOptions != nullptr) {
             QualityAssurance::JTestTextOptions::Unregister(*this);
+            _implTestTextOptions->Unregister(&_notification);
             
             if (_implTestLegacy != nullptr) {
                 QualityAssurance::TestTextOptions::JTestLegacy::Unregister(*this);
