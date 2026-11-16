@@ -29,6 +29,10 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_CALCULATOR_STARTMODE "Activated" CACHE STRING "Automatically start Calculator")
 set(PLUGIN_CALCULATOR_MODE "Local" CACHE STRING "Set Calculator process mode (use Container to run out of process)")
+set(PLUGIN_CALCULATOR_PROCESSOR "Synchronous" CACHE STRING "OpenTelemetry processor used by Calculator (Synchronous or Batch)")
+set(PLUGIN_CALCULATOR_EXPORTER "Console" CACHE STRING "OpenTelemetry exporter used by Calculator (Console or HTTP)")
+set(PLUGIN_CALCULATOR_EXTRASPANS 40 CACHE STRING "Number of extra spans Calculator creates per Multiply (memory load test)")
+set(PLUGIN_CALCULATOR_EXTRASPANPAYLOAD 0 CACHE STRING "Size in bytes of the payload attribute added to every extra span")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

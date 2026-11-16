@@ -19,9 +19,13 @@
 
 #include "Module.h"
 
+#include <interfaces/IConfiguration.h>
 #include <interfaces/IMath.h>
 
 #include <open_telemetry/open_telemetry.h>
+
+#include "../common/TelemetryConfig.h"
+#include "../common/TimedSpan.h"
 
 #include <algorithm>
 #include <vector>
@@ -30,7 +34,29 @@ namespace Thunder {
 namespace Plugin {
 
     class CalculatorImplementation : public Exchange::IMath
-        , public Exchange::IMathExtended {
+        , public Exchange::IMathExtended
+        , public Exchange::IConfiguration {
+    private:
+        // Load-test settings from the "configuration" section of Calculator.json
+        class LoadConfig : public Core::JSON::Container {
+        public:
+            LoadConfig(const LoadConfig&) = delete;
+            LoadConfig& operator=(const LoadConfig&) = delete;
+
+            LoadConfig()
+                : Core::JSON::Container()
+                , ExtraSpans(0)
+                , ExtraSpanPayload(0)
+            {
+                Add(_T("extraspans"), &ExtraSpans);
+                Add(_T("extraspanpayload"), &ExtraSpanPayload);
+            }
+            ~LoadConfig() override = default;
+
+            Core::JSON::DecUInt16 ExtraSpans;
+            Core::JSON::DecUInt32 ExtraSpanPayload;
+        };
+
     public:
 
         PUSH_WARNING(DISABLE_WARNING_THIS_IN_MEMBER_INITIALIZER_LIST)
@@ -39,13 +65,10 @@ namespace Plugin {
         : _adminLock()
         ,_notifications()
         , _resultjob(*this)
+        , _telemetryInitialized(false)
+        , _extraSpans(0)
+        , _extraSpanPayload(0)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true},"componentname":"Thunder Calculator", "componentversion":"1.0.1"})" };
-
-            Telemetry::OpenTelemetry::Config telemetryConfig;
-            telemetryConfig.FromString(config);
-            Telemetry::OpenTelemetry::Configure(telemetryConfig);
-            Telemetry::OpenTelemetry::Instance().Initialize();
         }
 
         POP_WARNING()
@@ -56,7 +79,39 @@ namespace Plugin {
         ~CalculatorImplementation() override
         {
             _resultjob.Revoke();
-            Telemetry::OpenTelemetry::Instance().Deinitialize();
+            if (_telemetryInitialized == true) {
+                Telemetry::OpenTelemetry::Instance().Deinitialize();
+            }
+        }
+
+        uint32_t Configure(PluginHost::IShell* shell) override
+        {
+            ASSERT(shell != nullptr);
+            ASSERT(_telemetryInitialized == false);
+
+            string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true},"componentname":"Thunder Calculator", "componentversion":"1.0.1"})" };
+
+            Telemetry::OpenTelemetry::Config telemetryConfig;
+            telemetryConfig.FromString(config);
+
+            string error;
+            if (Telemetry::ApplyPluginConfig(telemetryConfig, shell->ConfigLine(), error) == false) {
+                SYSLOG(Logging::ParsingError, (_T("Parsing telemetry plugin config failed: %s"), error.c_str()));
+            }
+            LoadConfig pluginConfig;
+            pluginConfig.FromString(shell->ConfigLine());
+            _extraSpans = pluginConfig.ExtraSpans.Value();
+            _extraSpanPayload = pluginConfig.ExtraSpanPayload.Value();
+
+            fprintf(stderr, "Calculator OpenTelemetry %s, extraspans=%u extraspanpayload=%u bytes\n",
+                Telemetry::Describe(telemetryConfig).c_str(), _extraSpans, _extraSpanPayload);
+            fflush(stderr);
+
+            Telemetry::OpenTelemetry::Configure(telemetryConfig);
+            Telemetry::OpenTelemetry::Instance().Initialize();
+            _telemetryInitialized = true;
+
+            return Core::ERROR_NONE;
         }
 
         uint32_t Add(const uint16_t A, const uint16_t B, uint16_t& sum) const override
@@ -73,7 +128,7 @@ namespace Plugin {
 
         Core::hresult Register(Exchange::IMathExtended::INotification* const notification) override
         {
-           	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Register");
+           	Telemetry::TimedSpan span("Calculator Multiply Register");
             auto scope = Telemetry::OpenTelemetry::Instance().StartScopeFromJobContext();
 		    Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, "notification set");
 
@@ -89,6 +144,8 @@ namespace Plugin {
                     _notifications.push_back(notification);
                 }
             }
+
+            span.End();
 
             return result;
         }
@@ -116,7 +173,7 @@ namespace Plugin {
 
         Core::hresult Multiply(const uint16_t A, const uint16_t B) override
         {
-         	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply");
+         	Telemetry::TimedSpan span("Calculator Multiply");
 
             auto logrecord = Telemetry::OpenTelemetry::Instance().CreateTraceFilledLogRecord();
             logrecord->SetSeverity(opentelemetry::logs::Severity::kInfo);
@@ -131,6 +188,25 @@ namespace Plugin {
             _resultjob.Revoke();
             static_cast<MultiplayResultJob&>(_resultjob).SetContext(result, Core::JobContext::Instance().TraceContextW3C());
             _resultjob.Submit();
+
+            // Extra spans to raise memory usage; all kept alive (nested) until Multiply is done.
+            // Created after the log record and result job so those still belong to "Calculator Multiply".
+            std::vector<std::shared_ptr<Telemetry::OpenTelemetry::Span>> extraSpans;
+            extraSpans.reserve(_extraSpans);
+            const string payload(_extraSpanPayload, 'x');
+            for (uint16_t index = 0; index < _extraSpans; ++index) {
+                const string name = _T("Calculator Span Spam Multiply ") + std::to_string(index + 1);
+                extraSpans.push_back(Telemetry::OpenTelemetry::Instance().StartSpan(name));
+                if (payload.empty() == false) {
+                    (*extraSpans.back())->SetAttribute("payload", opentelemetry::nostd::string_view(payload.data(), payload.size()));
+                }
+            }
+            
+            // Each span restores the previous trace context when it ends, so end them in reverse order.
+            while (extraSpans.empty() == false) {
+                extraSpans.pop_back();
+            }
+            span.End();
 
             return Core::ERROR_NONE;
         }
@@ -155,13 +231,14 @@ namespace Plugin {
             void Dispatch() const
             {
                 Core::JobContext::Instance().TraceContextW3C() = _tracecontext;
-             	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("Calculator Multiply Sending results");
+             	Telemetry::TimedSpan span("Calculator Multiply Sending results");
                 {
                     Core::SafeSyncType<Core::CriticalSection> lock(_parent._adminLock);
                     for (auto* notification : _parent._notifications) {
                         notification->MultiplyResult(_result);
                     }
                 }
+                span.End();
                 Core::JobContext::Instance().TraceContextW3C().ClearTraceContext();
             }
 
@@ -174,12 +251,16 @@ namespace Plugin {
         BEGIN_INTERFACE_MAP(CalculatorImplementation)
             INTERFACE_ENTRY(Exchange::IMath)
             INTERFACE_ENTRY(Exchange::IMathExtended)
+            INTERFACE_ENTRY(Exchange::IConfiguration)
         END_INTERFACE_MAP
 
     private:
         Core::CriticalSection _adminLock;
         std::vector<Exchange::IMathExtended::INotification*> _notifications;
         Core::WorkerPool::JobType<MultiplayResultJob> _resultjob;            
+        bool _telemetryInitialized;
+        uint16_t _extraSpans;
+        uint32_t _extraSpanPayload;
 
 
     };

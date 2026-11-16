@@ -19,6 +19,11 @@ startmode = "@PLUGIN_CALCULATOR_STARTMODE@"
 
 configuration = JSON()
 
+configuration.add("processor", "@PLUGIN_CALCULATOR_PROCESSOR@")
+configuration.add("exporter", "@PLUGIN_CALCULATOR_EXPORTER@")
+configuration.add("extraspans", "@PLUGIN_CALCULATOR_EXTRASPANS@")
+configuration.add("extraspanpayload", "@PLUGIN_CALCULATOR_EXTRASPANPAYLOAD@")
+
 root = JSON()
 root.add("mode", "@PLUGIN_CALCULATOR_MODE@")
 configuration.add("root", root)

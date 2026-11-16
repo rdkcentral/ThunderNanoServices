@@ -19,6 +19,7 @@
 
 #include "Calculator.h"
 
+#include <interfaces/IConfiguration.h>
 #include <interfaces/json/JMath.h>
 #include <interfaces/json/JMathExtended.h>
 
@@ -56,6 +57,12 @@ namespace Plugin {
         if (_mathImplementation == nullptr) {
             message = _T("Calculator implementation could not be instantiated");
         } else {
+            Exchange::IConfiguration* config = _mathImplementation->QueryInterface<Exchange::IConfiguration>();
+            ASSERT(config != nullptr);
+            if (config != nullptr) {
+                config->Configure(_service);
+                config->Release();
+            }
             Exchange::JMath::Register(*this, _mathImplementation);
             _mathExtendedImplementation = _mathImplementation->QueryInterface<Exchange::IMathExtended>();
             if (_mathExtendedImplementation == nullptr) {

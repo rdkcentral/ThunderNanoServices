@@ -29,6 +29,8 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 
 set(PLUGIN_CALCULATORPROXY_STARTMODE "Activated" CACHE STRING "Automatically start CalculatorProxy")
 set(PLUGIN_CALCULATORPROXY_MODE "Local" CACHE STRING "Set CalculatorProxy process mode (use Container to run out of process)")
+set(PLUGIN_CALCULATORPROXY_PROCESSOR "Synchronous" CACHE STRING "OpenTelemetry processor used by CalculatorProxy (Synchronous or Batch)")
+set(PLUGIN_CALCULATORPROXY_EXPORTER "Console" CACHE STRING "OpenTelemetry exporter used by CalculatorProxy (Console or HTTP)")
 
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)

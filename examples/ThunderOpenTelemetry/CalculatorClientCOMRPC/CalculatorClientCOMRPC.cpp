@@ -37,6 +37,9 @@
 #include <plugins/plugins.h>
 #include <open_telemetry/open_telemetry.h>
 
+#include "../common/TelemetryConfig.h"
+#include "../common/TimedSpan.h"
+
 #include <cerrno>
 #include <chrono>
 #include <condition_variable>
@@ -65,12 +68,13 @@ namespace {
 
             void MultiplyResult(const uint32_t result) override
             {
-	            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply Received");
+	            Telemetry::TimedSpan span("COMRPC Application Multiply Received");
                 span->Activate();
                 std::string textresult{"Multiply result ="};
                 textresult += std::to_string(result) ;
                 Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, textresult);
                 _parent.MultiplyResult(result);
+                span.End();
             }
 
             BEGIN_INTERFACE_MAP(Notification)
@@ -185,10 +189,15 @@ namespace {
 int main(int argc, char* argv[])
 {
     string callsign(_T("CalculatorProxy"));
+    string pluginFile(_T("/etc/Thunder/plugins/Calculator.json"));
 
     if(argc >= 2)
     {
         callsign = argv[1];
+    }
+    if(argc >= 3)
+    {
+        pluginFile = argv[2];
     }
 
     printf("*** Calculator using %s ***\n\n", callsign.c_str());
@@ -201,6 +210,13 @@ int main(int argc, char* argv[])
     if(error.IsSet() == true) {
         printf("\nError parsing config: %s\n\n", error.Value().Message().c_str());
     }
+
+    string telemetryError;
+    if (Telemetry::ApplyPluginConfigFromFile(telemetryConfig, pluginFile, telemetryError) == false) {
+        printf("Using default telemetry settings, reading %s failed: %s\n", pluginFile.c_str(), telemetryError.c_str());
+    }
+    printf("OpenTelemetry %s\n\n", Telemetry::Describe(telemetryConfig).c_str());
+
     Telemetry::OpenTelemetry::Configure(telemetryConfig);
 
     Telemetry::OpenTelemetry::Instance().Initialize();
@@ -223,7 +239,7 @@ int main(int argc, char* argv[])
         return 5;
     }
 
-	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
+	Telemetry::TimedSpan span("COMRPC Application Multiply");
     (*span)->SetAttribute("Multiply","20x20");
 
     result = client.Multiply(20, 20);
@@ -251,7 +267,7 @@ int main(int argc, char* argv[])
         latency->Record(42.0, attrs_view, opentelemetry::context::Context{});
     }
 
-    span->End();
+    span.End();
 
     std::printf("%u * %u = %u\n", 20, 20, product);
 

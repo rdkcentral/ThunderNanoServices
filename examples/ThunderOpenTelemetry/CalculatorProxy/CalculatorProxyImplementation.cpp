@@ -26,6 +26,9 @@
 
 #include <open_telemetry/open_telemetry.h>
 
+#include "../common/TelemetryConfig.h"
+#include "../common/TimedSpan.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -44,12 +47,6 @@ namespace Plugin {
             , _notifications()
             , _registeredfornotifications(false)
         {
-            string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true},"componentname":"Thunder CalculatorProxy","componentversion":"1.0.1"})" };
-
-            Telemetry::OpenTelemetry::Config telemetryConfig;
-            telemetryConfig.FromString(config);
-            Telemetry::OpenTelemetry::Configure(telemetryConfig);
-            Telemetry::OpenTelemetry::Instance().Initialize();
         }
         CalculatorProxyImplementation(const CalculatorProxyImplementation&) = delete;
         CalculatorProxyImplementation& operator=(const CalculatorProxyImplementation&) = delete;
@@ -68,9 +65,8 @@ namespace Plugin {
             
             if (_service != nullptr) {
                 _service->Release();
+                Telemetry::OpenTelemetry::Instance().Deinitialize();
             }
-
-            Telemetry::OpenTelemetry::Instance().Deinitialize();
         }
 
         uint32_t Configure(PluginHost::IShell* shell) override     
@@ -80,6 +76,21 @@ namespace Plugin {
 
             _service = shell;
             static_cast<void>(_service->AddRef());
+
+            string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true},"componentname":"Thunder CalculatorProxy","componentversion":"1.0.1"})" };
+
+            Telemetry::OpenTelemetry::Config telemetryConfig;
+            telemetryConfig.FromString(config);
+
+            string error;
+            if (Telemetry::ApplyPluginConfig(telemetryConfig, _service->ConfigLine(), error) == false) {
+                SYSLOG(Logging::ParsingError, (_T("Parsing telemetry plugin config failed: %s"), error.c_str()));
+            }
+            fprintf(stderr, "CalculatorProxy OpenTelemetry %s\n", Telemetry::Describe(telemetryConfig).c_str());
+            fflush(stderr);
+
+            Telemetry::OpenTelemetry::Configure(telemetryConfig);
+            Telemetry::OpenTelemetry::Instance().Initialize();
 
             return Core::ERROR_NONE;
         }
@@ -158,7 +169,7 @@ namespace Plugin {
 
         Core::hresult Multiply(const uint16_t A, const uint16_t B) override
         {
-          	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply");
+          	Telemetry::TimedSpan span("CalculatorProxy Multiply");
 
             uint32_t result = Core::ERROR_UNAVAILABLE;
 
@@ -167,23 +178,27 @@ namespace Plugin {
                 _adminLock.Lock();
                 if(_registeredfornotifications == false){
 
-                  	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply Registering");
+                  	Telemetry::TimedSpan span("CalculatorProxy Multiply Registering");
                    (*span)->SetAttribute("Test","Nested spans in same thread");
 
                     imathExtended->Register(this);
                    _registeredfornotifications = true;
+
+                    span.End();
                 }
                 _adminLock.Unlock();
                 result = imathExtended->Multiply(A, B);
                 imathExtended->Release();
             }
 
+            span.End();
+
             return result;
         }
 
         void MultiplyResult(const uint32_t result) override
         {
-          	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("CalculatorProxy Multiply Sending results");
+          	Telemetry::TimedSpan span("CalculatorProxy Multiply Sending results");
 
             Core::SafeSyncType<Core::CriticalSection> lock(_adminLock);
             for (auto* notification : _notifications) {
@@ -195,6 +210,8 @@ namespace Plugin {
                 internalnotification->MultiplyResult(result);
                 internalnotification->Release();
             }
+
+            span.End();
         }
 
         BEGIN_INTERFACE_MAP(CalculatorProxyImplementation)

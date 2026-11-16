@@ -27,6 +27,9 @@
 
 #include <open_telemetry/open_telemetry.h>
 
+#include "../common/TelemetryConfig.h"
+#include "../common/TimedSpan.h"
+
 
 #include <chrono>
 #include <condition_variable>
@@ -57,7 +60,7 @@ namespace
 
             uint32_t result = parameters.Result.Value();
 
-            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply Received");
+            Telemetry::TimedSpan span("COMRPC Application Multiply Received");
             span->Activate();
             std::string textresult{"Multiply result ="};
             textresult += std::to_string(result) ;
@@ -69,6 +72,8 @@ namespace
                 _result = result;
             }
             _signal.notify_one();
+
+            span.End();
         }
 
         bool WaitFor(uint32_t& result) 
@@ -94,16 +99,28 @@ int main(int argc, char* argv[])
 {
 
     string callsign(_T("CalculatorProxy"));
+    string pluginFile(_T("/etc/Thunder/plugins/Calculator.json"));
 
     if(argc >= 2)
     {
         callsign = argv[1];
+    }
+    if(argc >= 3)
+    {
+        pluginFile = argv[2];
     }
 
     string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true}, "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
     telemetryConfig.FromString(config);
+
+    string telemetryError;
+    if (Telemetry::ApplyPluginConfigFromFile(telemetryConfig, pluginFile, telemetryError) == false) {
+        printf("Using default telemetry settings, reading %s failed: %s\n", pluginFile.c_str(), telemetryError.c_str());
+    }
+    printf("OpenTelemetry %s\n\n", Telemetry::Describe(telemetryConfig).c_str());
+
     Telemetry::OpenTelemetry::Configure(telemetryConfig);
     Telemetry::OpenTelemetry::Instance().Initialize();
 
@@ -141,7 +158,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
+	Telemetry::TimedSpan span("COMRPC Application Multiply");
     (*span)->SetAttribute("Multiply","40x40");
 
     JsonData::MathExtended::MultiplyParamsData parameters;
@@ -157,7 +174,7 @@ int main(int argc, char* argv[])
     uint32_t product = 0;
     const bool notified = notification.WaitFor(product);
 
-    span->End();
+    span.End();
 
     if(notified == false) {
         std::fprintf(stderr, "Multiply result notification timed out\n");

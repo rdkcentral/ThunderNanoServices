@@ -19,6 +19,9 @@ startmode = "@PLUGIN_CALCULATORPROXY_STARTMODE@"
 
 configuration = JSON()
 
+configuration.add("processor", "@PLUGIN_CALCULATORPROXY_PROCESSOR@")
+configuration.add("exporter", "@PLUGIN_CALCULATORPROXY_EXPORTER@")
+
 root = JSON()
 root.add("mode", "@PLUGIN_CALCULATORPROXY_MODE@")
 configuration.add("root", root)
