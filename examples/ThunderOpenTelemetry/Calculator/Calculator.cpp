@@ -17,20 +17,10 @@
  * limitations under the License.
  */
 
-#include <iostream>
-#include <cstdio>
-#include <fstream>
-#include <sstream>
-#include <unistd.h>
-#include <syslog.h>
-
 #include "Calculator.h"
 
 #include <interfaces/json/JMath.h>
 #include <interfaces/json/JMathExtended.h>
-
-#define LOG_STREAM(msg) (std::cerr << __FILE__ << ":" << __LINE__ << " " << __func__ << ": " << msg << '\n')
-#define LOG_PRINTF(fmt, ...) std::fprintf(stderr, "[%s:%d] " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace WPEFramework {
 namespace Plugin {
@@ -56,39 +46,6 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
-
-        std::cout << "LOG-001 std::cout newline\n";
-        std::cout << "LOG-002 std::cout endl" << std::endl;
-        std::cerr << "LOG-003 std::cerr unbuffered\n";
-        std::clog << "LOG-004 std::clog buffered\n";
-        std::cout.write("LOG-005 cout.write\n", 19);
-
-        std::printf("LOG-006 printf x=%d\n", x);
-        std::fprintf(stderr, "LOG-007 fprintf stderr\n");
-        std::puts("LOG-008 puts");
-        std::fputs("LOG-009 fputs stderr\n", stderr);
-        std::perror("LOG-010 perror");
-
-        dprintf(STDERR_FILENO, "LOG-011 dprintf\n");
-        write(STDERR_FILENO, "LOG-012 write\n", 14);
-            
-        std::cout << std::format("LOG-013 std::format x={}\n", x);   // C++20
-        std::println("LOG-014 std::println x={}", x);                // C++23
-        std::println(stderr, "LOG-015 println stderr");              // C++23
-
-        std::ofstream("app.log", std::ios::app) << "LOG-016 ofstream\n";
-        { std::ostringstream ss; ss << "LOG-017 ostringstream x=" << x; std::cerr << ss.str() << '\n'; }
-
-        LOG_STREAM("LOG-018 stream macro");
-        LOG_PRINTF("LOG-019 printf macro x=%d", x);
-
-        syslog(LOG_INFO, "LOG-020 syslog info x=%d", x);
-        syslog(LOG_ERR, "LOG-021 syslog error");
-
-        spdlog::info("LOG-022 spdlog x={}", x);
-        LOG(INFO) << "LOG-023 glog/abseil";
-        BOOST_LOG_TRIVIAL(info) << "LOG-024 boost.log";
-        RDK_LOG(RDK_LOG_INFO, "LOG.RDK.MYMOD", "LOG-025 rdklogger x=%d\n", x);
 
         string message;
         _service = service;
