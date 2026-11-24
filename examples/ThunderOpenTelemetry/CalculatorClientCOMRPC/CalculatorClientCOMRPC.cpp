@@ -45,6 +45,7 @@
 #include <limits>
 #include <mutex>
 #include <cstdint>
+#include <vector>
 
 #if defined(__linux__)
 #include <fcntl.h>
@@ -264,6 +265,10 @@ int main(int argc, char* argv[])
         auto attrs_view = opentelemetry::common::KeyValueIterableView<decltype(attrs)>{attrs};
 
         constexpr uint32_t operationCount = 50;
+        std::vector<std::shared_ptr<Telemetry::OpenTelemetry::Span>> spans;
+        spans.reserve(operationCount);
+
+        // Create and retain all spans before ending any of them.
         for (uint32_t operation = 0; operation < operationCount; ++operation) {
             const uint64_t rssBeforeBytes = CurrentRssBytes();
             const auto spanCreationStart = std::chrono::steady_clock::now();
@@ -272,49 +277,63 @@ int main(int argc, char* argv[])
                 std::chrono::steady_clock::now() - spanCreationStart).count();
             const uint64_t rssAfterStartSpanBytes = CurrentRssBytes();
             (*span)->SetAttribute("span.creation_duration_ns", spanCreationNs);
-            std::printf("StartSpan call for operation %u took %.0f ns\n", operation + 1, spanCreationNs);
             (*span)->SetAttribute("Multiply", "20x20");
             (*span)->SetAttribute("operation.number", static_cast<int64_t>(operation + 1));
+            spans.emplace_back(std::move(span));
 
+            std::printf("StartSpan call for operation %u took %.0f ns\n", operation + 1, spanCreationNs);
+            if (rssBeforeBytes != 0 && rssAfterStartSpanBytes != 0) {
+                const double rssBeforeMiB = static_cast<double>(rssBeforeBytes) / (1024.0 * 1024.0);
+                const double rssAfterStartSpanMiB = static_cast<double>(rssAfterStartSpanBytes) / (1024.0 * 1024.0);
+                std::printf("RSS after creating span %u: %.2f MiB (%+.2f MiB)\n",
+                    operation + 1, rssAfterStartSpanMiB, rssAfterStartSpanMiB - rssBeforeMiB);
+            }
+        }
+
+        // Keep the 50 spans open while the corresponding calculator operations run.
+        for (uint32_t operation = 0; operation < operationCount; ++operation) {
             const auto start = std::chrono::steady_clock::now();
             result = client.Multiply(20, 20);
 
             if (result != WPEFramework::Core::ERROR_NONE) {
-               std::fprintf(stderr, "Multiply failed: %u\n", result);
-               return 6;
+                std::fprintf(stderr, "Multiply failed on operation %u: %u\n", operation + 1, result);
+                break;
             }
 
             uint32_t product = 0;
             if (client.WaitForResult(product) == false) {
-               std::fprintf(stderr, "Timed out waiting for MultiplyResult.\n");
-               return 7;
+                std::fprintf(stderr, "Timed out waiting for MultiplyResult on operation %u.\n", operation + 1);
+                result = WPEFramework::Core::ERROR_TIMEDOUT;
+                break;
             }
 
-            span->Activate();
+            multiplications->Add(1, attrs_view);
+            const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+            latency->Record(elapsed, attrs_view, opentelemetry::context::Context{});
+            std::printf("Operation %u/%u: %u * %u = %u\n", operation + 1, operationCount, 20, 20, product);
+        }
 
+        // End in reverse order so the saved trace context is restored in stack order.
+        for (uint32_t operation = operationCount; operation > 0; --operation) {
             const uint64_t rssBeforeEndBytes = CurrentRssBytes();
             const auto spanEndStart = std::chrono::steady_clock::now();
-            span->End();
+            spans[operation - 1]->End();
             const double spanEndCallNs = std::chrono::duration<double, std::nano>(
                 std::chrono::steady_clock::now() - spanEndStart).count();
             const uint64_t rssAfterEndBytes = CurrentRssBytes();
-            std::printf("span->End() call for operation %u took %.0f ns\n", operation + 1, spanEndCallNs);
-            if (rssBeforeBytes != 0 && rssAfterStartSpanBytes != 0 && rssBeforeEndBytes != 0 && rssAfterEndBytes != 0) {
-                const double rssBeforeMiB = static_cast<double>(rssBeforeBytes) / (1024.0 * 1024.0);
-                const double rssAfterStartSpanMiB = static_cast<double>(rssAfterStartSpanBytes) / (1024.0 * 1024.0);
+            std::printf("span->End() call for operation %u took %.0f ns\n", operation, spanEndCallNs);
+            if (rssBeforeEndBytes != 0 && rssAfterEndBytes != 0) {
                 const double rssBeforeEndMiB = static_cast<double>(rssBeforeEndBytes) / (1024.0 * 1024.0);
                 const double rssAfterEndMiB = static_cast<double>(rssAfterEndBytes) / (1024.0 * 1024.0);
-                std::printf("RSS operation %u: before=%.2f MiB, after StartSpan=%.2f MiB (%+.2f MiB), before End=%.2f MiB, after End=%.2f MiB (%+.2f MiB)\n",
-                    operation + 1, rssBeforeMiB, rssAfterStartSpanMiB, rssAfterStartSpanMiB - rssBeforeMiB,
-                    rssBeforeEndMiB, rssAfterEndMiB, rssAfterEndMiB - rssBeforeEndMiB);
+                std::printf("RSS around End for span %u: before=%.2f MiB, after=%.2f MiB (%+.2f MiB)\n",
+                    operation, rssBeforeEndMiB, rssAfterEndMiB, rssAfterEndMiB - rssBeforeEndMiB);
             } else {
-                std::printf("RSS unavailable for operation %u (this sampler requires Linux /proc).\n", operation + 1);
+                std::printf("RSS unavailable around End for span %u (requires Linux /proc).\n", operation);
             }
+        }
 
-            const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
-            multiplications->Add(1, attrs_view);
-            latency->Record(elapsed, attrs_view, opentelemetry::context::Context{});
-            std::printf("Operation %u/%u: %u * %u = %u\n", operation + 1, operationCount, 20, 20, product);
+        if (result != WPEFramework::Core::ERROR_NONE) {
+            return (result == WPEFramework::Core::ERROR_TIMEDOUT) ? 7 : 6;
         }
     }
 
