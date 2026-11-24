@@ -2,7 +2,7 @@
  * If not stated otherwise in this file or this component's LICENSE file the
  * following copyright and licenses apply:
  *
- * Copyright 2020 Metrological
+ * Copyright 2026 Metrological
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #pragma once
 
 #ifndef MODULE_NAME
-#define MODULE_NAME Plugin_CustomErrorCodeServer
+#define MODULE_NAME Plugin_SimpleRichError
 #endif
 
+#include <core/core.h>
 #include <plugins/plugins.h>
-#include <definitions/definitions.h>
 
 #undef EXTERNAL
 #define EXTERNAL
