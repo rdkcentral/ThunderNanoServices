@@ -57,8 +57,6 @@ namespace Plugin {
         ASSERT(service != nullptr);
         ASSERT(_service == nullptr);
 
-                const int x = 42;
-
         std::cout << "LOG-001 std::cout newline\n";
         std::cout << "LOG-002 std::cout endl" << std::endl;
         std::cerr << "LOG-003 std::cerr unbuffered\n";
@@ -72,17 +70,11 @@ namespace Plugin {
         std::perror("LOG-010 perror");
 
         dprintf(STDERR_FILENO, "LOG-011 dprintf\n");
-        if (write(STDERR_FILENO, "LOG-012 write\n", 14) < 0) {
-            // ignore, only here to satisfy warn_unused_result under -Werror
-        }
-
-#if __cplusplus >= 202002L && __has_include(<format>)
-        std::cout << std::format("LOG-013 std::format x={}\n", x);
-#endif
-#if __cplusplus > 202002L && __has_include(<print>)
-        std::println("LOG-014 std::println x={}", x);
-        std::println(stderr, "LOG-015 println stderr");
-#endif
+        write(STDERR_FILENO, "LOG-012 write\n", 14);
+            
+        std::cout << std::format("LOG-013 std::format x={}\n", x);   // C++20
+        std::println("LOG-014 std::println x={}", x);                // C++23
+        std::println(stderr, "LOG-015 println stderr");              // C++23
 
         std::ofstream("app.log", std::ios::app) << "LOG-016 ofstream\n";
         { std::ostringstream ss; ss << "LOG-017 ostringstream x=" << x; std::cerr << ss.str() << '\n'; }
