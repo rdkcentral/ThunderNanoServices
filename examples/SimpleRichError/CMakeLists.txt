@@ -1,7 +1,7 @@
 # If not stated otherwise in this file or this component's LICENSE file the
 # following copyright and licenses apply:
 #
-# Copyright 2025 Metrological
+# Copyright 2026 Metrological
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(CustomErrorCodeServer)
-
 cmake_minimum_required(VERSION 3.15)
+
+project(SimpleRichError)
 
 find_package(Thunder)
 
@@ -30,17 +30,13 @@ message("Setup ${MODULE_NAME} v${PROJECT_VERSION}")
 find_package(${NAMESPACE}Core REQUIRED)
 find_package(${NAMESPACE}Plugins REQUIRED)
 find_package(${NAMESPACE}Definitions REQUIRED)
-find_package(${NAMESPACE}Messaging REQUIRED)
 find_package(CompileSettingsDebug REQUIRED)
+
+set(PLUGIN_SIMPLERICHERROR_STARTMODE "Activated" CACHE STRING "Automatically start the plugin")
 
 add_library(${MODULE_NAME} SHARED
     Module.cpp
-    CustomErrorCodeServer.cpp
-)
-
-target_include_directories(${MODULE_NAME} SYSTEM
-    PRIVATE
-        ".")
+    SimpleRichError.cpp)
 
 set_target_properties(${MODULE_NAME} PROPERTIES
     CXX_STANDARD ${CXX_STD}
@@ -51,9 +47,10 @@ target_link_libraries(${MODULE_NAME}
         ${NAMESPACE}Core::${NAMESPACE}Core
         ${NAMESPACE}Plugins::${NAMESPACE}Plugins
         ${NAMESPACE}Definitions::${NAMESPACE}Definitions
-        ${NAMESPACE}Messaging::${NAMESPACE}Messaging
         CompileSettingsDebug::CompileSettingsDebug)
 
-install(TARGETS ${MODULE_NAME} DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins COMPONENT ${NAMESPACE}_Runtime)
+install(TARGETS ${MODULE_NAME}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins
+    COMPONENT ${NAMESPACE}_Runtime)
 
 write_config()
