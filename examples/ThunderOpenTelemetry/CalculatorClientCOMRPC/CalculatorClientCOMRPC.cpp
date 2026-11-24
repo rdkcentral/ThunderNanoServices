@@ -264,7 +264,6 @@ int main(int argc, char* argv[])
         auto attrs_view = opentelemetry::common::KeyValueIterableView<decltype(attrs)>{attrs};
 
         constexpr uint32_t operationCount = 50;
-        uint32_t product = 0;
         for (uint32_t operation = 0; operation < operationCount; ++operation) {
             const uint64_t rssBeforeBytes = CurrentRssBytes();
             const auto spanCreationStart = std::chrono::steady_clock::now();
