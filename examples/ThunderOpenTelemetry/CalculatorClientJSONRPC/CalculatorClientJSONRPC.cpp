@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
         callsign = argv[1];
     }
 
-    string config{ R"({"sampler":"ParentOn", "logger": {"loggerenabled" : true}, "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
+    string config{ R"({"sampler":"ParentOn", "logger": {"enabled" : true}, "componentname":"Thunder JSONRPC test app","componentversion":"1.0.1"})" };
 
     Telemetry::OpenTelemetry::Config telemetryConfig;
     telemetryConfig.FromString(config);
