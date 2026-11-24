@@ -44,12 +44,44 @@
 #include <cstdlib>
 #include <limits>
 #include <mutex>
+#include <cstdint>
+
+#if defined(__linux__)
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 MODULE_NAME_DECLARATION(BUILD_REFERENCE)
 
 namespace {
 
     using namespace WPEFramework;
+
+    uint64_t CurrentRssBytes()
+    {
+#if defined(__linux__)
+        const int statm = open("/proc/self/statm", O_RDONLY);
+        if (statm < 0) {
+            return 0;
+        }
+
+        char buffer[128];
+        const ssize_t bytesRead = read(statm, buffer, sizeof(buffer) - 1);
+        close(statm);
+        if (bytesRead <= 0) {
+            return 0;
+        }
+
+        buffer[bytesRead] = '\0';
+        char* cursor = buffer;
+        std::strtoull(cursor, &cursor, 10); // Skip total virtual-memory pages.
+        const uint64_t residentPages = std::strtoull(cursor, nullptr, 10);
+        const long pageSize = sysconf(_SC_PAGESIZE);
+        return (pageSize > 0) ? residentPages * static_cast<uint64_t>(pageSize) : 0;
+#else
+        return 0;
+#endif
+    }
 
     class CalculatorExtendedClientCOMRPC : private RPC::SmartInterfaceType<Exchange::IMathExtended> {
     private:
@@ -70,6 +102,7 @@ namespace {
                 std::string textresult{"Multiply result ="};
                 textresult += std::to_string(result) ;
                 Telemetry::OpenTelemetry::Instance().Logger()->Log(opentelemetry::logs::Severity::kInfo, textresult);
+                span->End();
                 _parent.MultiplyResult(result);
             }
 
@@ -223,23 +256,6 @@ int main(int argc, char* argv[])
         return 5;
     }
 
-	auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
-    (*span)->SetAttribute("Multiply","20x20");
-
-    result = client.Multiply(20, 20);
-    if (result != WPEFramework::Core::ERROR_NONE) {
-        std::fprintf(stderr, "Multiply failed: %u\n", result);
-        return 6;
-    }
-
-    uint32_t product = 0;
-    if (client.WaitForResult(product) == false) {
-        std::fprintf(stderr, "Timed out waiting for MultiplyResult.\n");
-        return 7;
-    }
-
-    span->Activate();
-
     {
         auto multiplications = Telemetry::OpenTelemetry::Instance().Meter()->CreateUInt64Counter("multiplications", "Number of multiplications processed", "{multiplications}");
         auto latency = Telemetry::OpenTelemetry::Instance().Meter()->CreateDoubleHistogram("multiplications.duration", "multiplications processing duration", "ms");
@@ -247,13 +263,61 @@ int main(int argc, char* argv[])
         std::map<std::string, std::string> attrs{{"multiplications.provider", "thunder"}};
         auto attrs_view = opentelemetry::common::KeyValueIterableView<decltype(attrs)>{attrs};
 
-        multiplications->Add(1, attrs_view);
-        latency->Record(42.0, attrs_view, opentelemetry::context::Context{});
+        constexpr uint32_t operationCount = 50;
+        uint32_t product = 0;
+        for (uint32_t operation = 0; operation < operationCount; ++operation) {
+            const uint64_t rssBeforeBytes = CurrentRssBytes();
+            const auto spanCreationStart = std::chrono::steady_clock::now();
+            auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
+            const double spanCreationNs = std::chrono::duration<double, std::nano>(
+                std::chrono::steady_clock::now() - spanCreationStart).count();
+            const uint64_t rssAfterStartSpanBytes = CurrentRssBytes();
+            (*span)->SetAttribute("span.creation_duration_ns", spanCreationNs);
+            std::printf("StartSpan call for operation %u took %.0f ns\n", operation + 1, spanCreationNs);
+            (*span)->SetAttribute("Multiply", "20x20");
+            (*span)->SetAttribute("operation.number", static_cast<int64_t>(operation + 1));
+
+            const auto start = std::chrono::steady_clock::now();
+            result = client.Multiply(20, 20);
+
+            if (result != WPEFramework::Core::ERROR_NONE) {
+               std::fprintf(stderr, "Multiply failed: %u\n", result);
+               return 6;
+            }
+
+            uint32_t product = 0;
+            if (client.WaitForResult(product) == false) {
+               std::fprintf(stderr, "Timed out waiting for MultiplyResult.\n");
+               return 7;
+            }
+
+            span->Activate();
+
+            const uint64_t rssBeforeEndBytes = CurrentRssBytes();
+            const auto spanEndStart = std::chrono::steady_clock::now();
+            span->End();
+            const double spanEndCallNs = std::chrono::duration<double, std::nano>(
+                std::chrono::steady_clock::now() - spanEndStart).count();
+            const uint64_t rssAfterEndBytes = CurrentRssBytes();
+            std::printf("span->End() call for operation %u took %.0f ns\n", operation + 1, spanEndCallNs);
+            if (rssBeforeBytes != 0 && rssAfterStartSpanBytes != 0 && rssBeforeEndBytes != 0 && rssAfterEndBytes != 0) {
+                const double rssBeforeMiB = static_cast<double>(rssBeforeBytes) / (1024.0 * 1024.0);
+                const double rssAfterStartSpanMiB = static_cast<double>(rssAfterStartSpanBytes) / (1024.0 * 1024.0);
+                const double rssBeforeEndMiB = static_cast<double>(rssBeforeEndBytes) / (1024.0 * 1024.0);
+                const double rssAfterEndMiB = static_cast<double>(rssAfterEndBytes) / (1024.0 * 1024.0);
+                std::printf("RSS operation %u: before=%.2f MiB, after StartSpan=%.2f MiB (%+.2f MiB), before End=%.2f MiB, after End=%.2f MiB (%+.2f MiB)\n",
+                    operation + 1, rssBeforeMiB, rssAfterStartSpanMiB, rssAfterStartSpanMiB - rssBeforeMiB,
+                    rssBeforeEndMiB, rssAfterEndMiB, rssAfterEndMiB - rssBeforeEndMiB);
+            } else {
+                std::printf("RSS unavailable for operation %u (this sampler requires Linux /proc).\n", operation + 1);
+            }
+
+            const auto elapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+            multiplications->Add(1, attrs_view);
+            latency->Record(elapsed, attrs_view, opentelemetry::context::Context{});
+            std::printf("Operation %u/%u: %u * %u = %u\n", operation + 1, operationCount, 20, 20, product);
+        }
     }
-
-    span->End();
-
-    std::printf("%u * %u = %u\n", 20, 20, product);
 
     client.Close();
 
