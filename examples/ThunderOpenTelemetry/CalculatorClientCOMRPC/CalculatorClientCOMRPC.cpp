@@ -273,20 +273,19 @@ int main(int argc, char* argv[])
             const uint64_t rssBeforeBytes = CurrentRssBytes();
             const auto spanCreationStart = std::chrono::steady_clock::now();
             auto span = Telemetry::OpenTelemetry::Instance().StartSpan("COMRPC Application Multiply");
-            const double spanCreationNs = std::chrono::duration<double, std::nano>(
+            const double spanCreationUs = std::chrono::duration<double, std::micro>(
                 std::chrono::steady_clock::now() - spanCreationStart).count();
             const uint64_t rssAfterStartSpanBytes = CurrentRssBytes();
-            (*span)->SetAttribute("span.creation_duration_ns", spanCreationNs);
+            (*span)->SetAttribute("span.creation_duration_us", spanCreationUs);
             (*span)->SetAttribute("Multiply", "20x20");
             (*span)->SetAttribute("operation.number", static_cast<int64_t>(operation + 1));
             spans.emplace_back(std::move(span));
 
-            std::printf("StartSpan call for operation %u took %.0f ns\n", operation + 1, spanCreationNs);
+            std::printf("StartSpan call for operation %u took %.2f us\n", operation + 1, spanCreationUs);
             if (rssBeforeBytes != 0 && rssAfterStartSpanBytes != 0) {
-                const double rssBeforeMiB = static_cast<double>(rssBeforeBytes) / (1024.0 * 1024.0);
-                const double rssAfterStartSpanMiB = static_cast<double>(rssAfterStartSpanBytes) / (1024.0 * 1024.0);
-                std::printf("RSS after creating span %u: %.2f MiB (%+.2f MiB)\n",
-                    operation + 1, rssAfterStartSpanMiB, rssAfterStartSpanMiB - rssBeforeMiB);
+                const int64_t rssChangeBytes = static_cast<int64_t>(rssAfterStartSpanBytes) - static_cast<int64_t>(rssBeforeBytes);
+                std::printf("RSS after creating span %u: %llu bytes (%+lld bytes)\n",
+                    operation + 1, static_cast<unsigned long long>(rssAfterStartSpanBytes), static_cast<long long>(rssChangeBytes));
             }
         }
 
@@ -318,15 +317,15 @@ int main(int argc, char* argv[])
             const uint64_t rssBeforeEndBytes = CurrentRssBytes();
             const auto spanEndStart = std::chrono::steady_clock::now();
             spans[operation - 1]->End();
-            const double spanEndCallNs = std::chrono::duration<double, std::nano>(
+            const double spanEndCallUs = std::chrono::duration<double, std::micro>(
                 std::chrono::steady_clock::now() - spanEndStart).count();
             const uint64_t rssAfterEndBytes = CurrentRssBytes();
-            std::printf("span->End() call for operation %u took %.0f ns\n", operation, spanEndCallNs);
+            std::printf("span->End() call for operation %u took %.2f us\n", operation, spanEndCallUs);
             if (rssBeforeEndBytes != 0 && rssAfterEndBytes != 0) {
-                const double rssBeforeEndMiB = static_cast<double>(rssBeforeEndBytes) / (1024.0 * 1024.0);
-                const double rssAfterEndMiB = static_cast<double>(rssAfterEndBytes) / (1024.0 * 1024.0);
-                std::printf("RSS around End for span %u: before=%.2f MiB, after=%.2f MiB (%+.2f MiB)\n",
-                    operation, rssBeforeEndMiB, rssAfterEndMiB, rssAfterEndMiB - rssBeforeEndMiB);
+                const int64_t rssChangeBytes = static_cast<int64_t>(rssAfterEndBytes) - static_cast<int64_t>(rssBeforeEndBytes);
+                std::printf("RSS around End for span %u: before=%llu bytes, after=%llu bytes (%+lld bytes)\n",
+                    operation, static_cast<unsigned long long>(rssBeforeEndBytes), static_cast<unsigned long long>(rssAfterEndBytes),
+                    static_cast<long long>(rssChangeBytes));
             } else {
                 std::printf("RSS unavailable around End for span %u (requires Linux /proc).\n", operation);
             }
