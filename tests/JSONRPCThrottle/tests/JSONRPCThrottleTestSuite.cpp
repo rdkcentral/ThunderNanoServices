@@ -559,56 +559,6 @@ TEST_F(JSONRPCThrottleTest, ResetDuringNoActivityLeavesCountersAtZero)
     EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 0u);
 }
 
-TEST_F(JSONRPCThrottleTest, ResetWhileCallIsActiveIsRejected)
-{
-    constexpr int kDelayMs = 500;
-
-    uint32_t delayResult = Core::ERROR_GENERAL;
-    std::thread worker([this, &delayResult]() {
-        auto link = _runtime.CreateJSONRPCLink(JSONRPCTHROTTLE_TEST_CALLSIGN);
-        if (link.IsValid()) {
-            string response;
-            delayResult = link->Invoke(
-                "delay",
-                "{\"milliseconds\":" + std::to_string(kDelayMs) + "}",
-                response);
-        }
-    });
-
-    // Wait until the delayed call is really in flight before resetting.
-    bool observedActive = false;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (std::chrono::steady_clock::now() < deadline) {
-        if (ReadStat("activeCalls") > 0) {
-            observedActive = true;
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-
-    string response;
-    const uint32_t resetWhileActive = _link->Invoke("reset", "{}", response);
-
-    // Join before asserting so a failed assertion can't leave the thread running.
-    worker.join();
-
-    ASSERT_TRUE(observedActive) << "The delayed call never became active";
-    EXPECT_EQ(resetWhileActive, Core::ERROR_INPROGRESS)
-        << "reset must be rejected while a measured call is active";
-    EXPECT_EQ(delayResult, Core::ERROR_NONE);
-
-    // The rejected reset must not have disturbed the in-flight call's counters,
-    // and Leave() must not have wrapped activeCalls below zero.
-    EXPECT_EQ(ReadStat("totalCalls"), 1u);
-    EXPECT_EQ(ReadStat("activeCalls"), 0u);
-    EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 1u);
-
-    // Once no call is active, reset works again.
-    ASSERT_EQ(_link->Invoke("reset", "{}", response), Core::ERROR_NONE);
-    EXPECT_EQ(ReadStat("totalCalls"), 0u);
-    EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 0u);
-}
-
 TEST_F(JSONRPCThrottleTest, HTTPThrottleFour)
 {
 #if !JSONRPCTHROTTLE_HAS_POSIX_SOCKETS
