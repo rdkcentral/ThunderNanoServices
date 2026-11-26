@@ -33,48 +33,33 @@
 #include <gtest/gtest.h>
 
 #include <atomic>
-#include <cctype>
 #include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+
+// The HTTP delay client below uses POSIX sockets. On other platforms the
+// HTTP throttle test is skipped instead of failing to compile.
+#if defined(__unix__) || defined(__APPLE__)
+#define JSONRPCTHROTTLE_HAS_POSIX_SOCKETS 1
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#include <cerrno>
-#include <cstring>
+#else
+#define JSONRPCTHROTTLE_HAS_POSIX_SOCKETS 0
+#endif
 
 namespace Thunder {
 namespace TestCore {
 namespace Tests {
 
 namespace {
-
-    // Minimal scraper for the flat, non-nested JSON that JSONRPCThrottle's
-    // Statistics container produces, e.g. {"totalCalls":3,"activeCalls":0,...}.
-    // Not a general JSON parser — only good for unsigned integer fields at
-    // the top level of this specific response shape.
-    uint64_t ExtractNumber(const string& json, const string& key)
-    {
-        const string needle = "\"" + key + "\":";
-        const auto pos = json.find(needle);
-        if (pos == string::npos) {
-            return 0;
-        }
-        auto start = pos + needle.size();
-        auto end = start;
-        while (end < json.size() && std::isdigit(static_cast<unsigned char>(json[end]))) {
-            ++end;
-        }
-        if (end == start) {
-            return 0;
-        }
-        return static_cast<uint64_t>(std::stoull(json.substr(start, end - start)));
-    }
 
     constexpr uint16_t HTTP_PORT = 19091;
     constexpr uint8_t CHANNEL_THROTTLE = 8;
@@ -145,11 +130,30 @@ protected:
         ASSERT_EQ(_link->Invoke("reset", "{}", response), Core::ERROR_NONE);
     }
 
+    // Reads one counter through GetStatistics(), which parses the response with
+    // StatisticsResponse. A failed call or parse marks the test as failed, so a
+    // broken response can never read back as a passing 0.
     uint64_t ReadStat(const string& key)
     {
-        string response;
-        EXPECT_EQ(_link->Invoke("statistics", "{}", response), Core::ERROR_NONE);
-        return ExtractNumber(response, key);
+        uint64_t totalCalls = 0;
+        uint64_t activeCalls = 0;
+        uint64_t maximumConcurrentCalls = 0;
+
+        const uint32_t result = GetStatistics(totalCalls, activeCalls, maximumConcurrentCalls);
+        EXPECT_EQ(result, Core::ERROR_NONE) << "statistics call or parse failed";
+
+        if (key == "totalCalls") {
+            return totalCalls;
+        }
+        if (key == "activeCalls") {
+            return activeCalls;
+        }
+        if (key == "maximumConcurrentCalls") {
+            return maximumConcurrentCalls;
+        }
+
+        ADD_FAILURE() << "Unknown statistic key: " << key;
+        return 0;
     }
 
     uint32_t ResetStatistics()
@@ -191,6 +195,7 @@ protected:
         return Core::ERROR_NONE;
     }
 
+#if JSONRPCTHROTTLE_HAS_POSIX_SOCKETS
     void SendDelayRequest(
     const uint32_t delayMilliseconds)
     {
@@ -205,6 +210,15 @@ protected:
             int fd;
             ~SocketCloser() { close(fd); }
         } closer { socketFd };
+
+#if !defined(MSG_NOSIGNAL) && defined(SO_NOSIGPIPE)
+        // No MSG_NOSIGNAL on this platform (macOS): suppress SIGPIPE on the
+        // socket itself so a closed peer shows up as a send() error instead.
+        const int noSigPipe = 1;
+        ASSERT_EQ(
+            setsockopt(socketFd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe)),
+            0) << "setsockopt(SO_NOSIGPIPE) failed: " << std::strerror(errno);
+#endif
 
         sockaddr_in address {};
         address.sin_family = AF_INET;
@@ -239,7 +253,7 @@ protected:
             << std::endl;
 
         const std::string request =
-            "POST /jsonrpc/JSONRPCThrottle HTTP/1.1\r\n"
+            "POST /jsonrpc/" JSONRPCTHROTTLE_TEST_CALLSIGN " HTTP/1.1\r\n"
             "Host: 127.0.0.1\r\n"
             "Content-Type: application/json\r\n"
             "Content-Length: "
@@ -251,6 +265,13 @@ protected:
 
         size_t sent = 0;
 
+        // A write to a peer that already closed would otherwise raise SIGPIPE
+        // and kill the whole test binary before the assertion below can report.
+        int sendFlags = 0;
+#if defined(MSG_NOSIGNAL)
+        sendFlags |= MSG_NOSIGNAL;
+#endif
+
         std::cout
             << "[HTTP] thread=" << std::this_thread::get_id()
             << " SEND delay(" << delayMilliseconds << ")"
@@ -261,16 +282,16 @@ protected:
                     socketFd,
                     request.data() + sent,
                     request.size() - sent,
-                    0);
+                    sendFlags);
 
-            ASSERT_GT(result, 0);
+            ASSERT_GT(result, 0) << "send() failed: " << std::strerror(errno);
 
             sent += static_cast<size_t>(result);
         }
 
         const auto deadline = std::chrono::steady_clock::now() + REQUEST_TIMEOUT;
         char buffer[4096];
-        size_t receivedTotal = 0;
+        std::string httpResponse;
 
         while (true) {
             const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -294,10 +315,26 @@ protected:
             }
             ASSERT_GT(received, 0) << "recv() failed: " << std::strerror(errno);
 
-            receivedTotal += static_cast<size_t>(received);
+            httpResponse.append(buffer, static_cast<size_t>(received));
         }
 
-        ASSERT_GT(receivedTotal, 0u) << "Connection closed without a response";
+        ASSERT_FALSE(httpResponse.empty()) << "Connection closed without a response";
+
+        // The status line is "HTTP/1.x <code> <reason>". Throttled requests are
+        // queued rather than rejected, so anything but a 2xx is a real failure.
+        const auto codePos = httpResponse.find(' ');
+        ASSERT_TRUE((httpResponse.compare(0, 7, "HTTP/1.") == 0) && (codePos != std::string::npos))
+            << "Malformed HTTP response: " << httpResponse.substr(0, 200);
+
+        const long status = std::strtol(httpResponse.c_str() + codePos + 1, nullptr, 10);
+        ASSERT_TRUE((status >= 200) && (status < 300))
+            << "Unexpected HTTP status " << status << ", response: " << httpResponse.substr(0, 300);
+
+        // A 2xx can still carry a JSON-RPC error object in the body.
+        const auto bodyPos = httpResponse.find("\r\n\r\n");
+        const std::string responseBody = (bodyPos == std::string::npos) ? std::string() : httpResponse.substr(bodyPos + 4);
+        ASSERT_EQ(responseBody.find("\"error\""), std::string::npos)
+            << "JSON-RPC error in response body: " << responseBody.substr(0, 300);
 
         std::cout
                 << "[HTTP] thread=" << std::this_thread::get_id()
@@ -334,6 +371,7 @@ protected:
             worker.join();
         }
     }
+#endif
 
     static ThunderTestRuntime _runtime;
     decltype(_runtime.CreateJSONRPCLink(JSONRPCTHROTTLE_TEST_CALLSIGN)) _link;
@@ -521,8 +559,61 @@ TEST_F(JSONRPCThrottleTest, ResetDuringNoActivityLeavesCountersAtZero)
     EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 0u);
 }
 
+TEST_F(JSONRPCThrottleTest, ResetWhileCallIsActiveIsRejected)
+{
+    constexpr int kDelayMs = 500;
+
+    uint32_t delayResult = Core::ERROR_GENERAL;
+    std::thread worker([this, &delayResult]() {
+        auto link = _runtime.CreateJSONRPCLink(JSONRPCTHROTTLE_TEST_CALLSIGN);
+        if (link.IsValid()) {
+            string response;
+            delayResult = link->Invoke(
+                "delay",
+                "{\"milliseconds\":" + std::to_string(kDelayMs) + "}",
+                response);
+        }
+    });
+
+    // Wait until the delayed call is really in flight before resetting.
+    bool observedActive = false;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (std::chrono::steady_clock::now() < deadline) {
+        if (ReadStat("activeCalls") > 0) {
+            observedActive = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    string response;
+    const uint32_t resetWhileActive = _link->Invoke("reset", "{}", response);
+
+    // Join before asserting so a failed assertion can't leave the thread running.
+    worker.join();
+
+    ASSERT_TRUE(observedActive) << "The delayed call never became active";
+    EXPECT_EQ(resetWhileActive, Core::ERROR_INPROGRESS)
+        << "reset must be rejected while a measured call is active";
+    EXPECT_EQ(delayResult, Core::ERROR_NONE);
+
+    // The rejected reset must not have disturbed the in-flight call's counters,
+    // and Leave() must not have wrapped activeCalls below zero.
+    EXPECT_EQ(ReadStat("totalCalls"), 1u);
+    EXPECT_EQ(ReadStat("activeCalls"), 0u);
+    EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 1u);
+
+    // Once no call is active, reset works again.
+    ASSERT_EQ(_link->Invoke("reset", "{}", response), Core::ERROR_NONE);
+    EXPECT_EQ(ReadStat("totalCalls"), 0u);
+    EXPECT_EQ(ReadStat("maximumConcurrentCalls"), 0u);
+}
+
 TEST_F(JSONRPCThrottleTest, HTTPThrottleFour)
 {
+#if !JSONRPCTHROTTLE_HAS_POSIX_SOCKETS
+    GTEST_SKIP() << "HTTP throttle test requires POSIX sockets";
+#else
     ASSERT_EQ(
         ResetStatistics(),
         Core::ERROR_NONE);
@@ -563,6 +654,7 @@ TEST_F(JSONRPCThrottleTest, HTTPThrottleFour)
     EXPECT_GE(
         elapsed.count(),
         7000);
+#endif
 }
 
 } // namespace Tests

@@ -23,7 +23,7 @@
 
 #include <plugins/plugins.h>
 
-#include <atomic>
+#include <mutex>
 
 namespace Thunder {
 namespace Plugin {
@@ -94,13 +94,24 @@ private:
     uint32_t Reset(
         const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED);
 
+    struct Counters {
+        uint64_t Total;
+        uint64_t Active;
+        uint64_t Maximum;
+    };
+
     void Enter();
     void Leave();
+    Counters Snapshot() const;
 
 private:
-    std::atomic<uint64_t> _totalCalls;
-    std::atomic<uint64_t> _activeCalls;
-    std::atomic<uint64_t> _maximumConcurrentCalls;
+    // All counters change together under _lock, so Reset() can verify that no
+    // measured call is active and clear the counters as one atomic step. The
+    // lock is held only for the counter update, never while a call is delayed.
+    mutable std::mutex _lock;
+    uint64_t _totalCalls;
+    uint64_t _activeCalls;
+    uint64_t _maximumConcurrentCalls;
 };
 
 } // namespace Plugin

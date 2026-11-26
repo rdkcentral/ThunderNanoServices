@@ -157,21 +157,23 @@ is limiting execution first.
 | `delay` | `milliseconds` (unsigned integer, default `1000`) | none | Counts the call and sleeps so concurrent requests overlap. |
 | `fast` | none | none | Counts a call without an intentional delay. |
 | `statistics` | none | `totalCalls`, `activeCalls`, `maximumConcurrentCalls` | Reads the current counters. It does not increment them. |
-| `reset` | none | none | Clears all counters. Use only when no measured calls are active. |
+| `reset` | none | none | Clears all counters. Fails with `ERROR_INPROGRESS`, leaving the counters unchanged, while any measured call is active. |
 
 ## Implementation
 
 ### Plugin measurement
 
 `delay` and `fast` call `Enter()` before doing work and `Leave()` afterward.
-`Enter()` atomically increments the total and active counters, then uses a
-compare-and-exchange loop to update the maximum observed concurrency. `Leave()`
-decrements the active count. `delay` sleeps between these operations, making it
+`Enter()` increments the total and active counters and updates the maximum
+observed concurrency, all under one mutex that is held only for the counter
+update, never while a call sleeps. `Leave()` decrements the active count under
+the same mutex. `delay` sleeps between these operations, making it
 the method used to expose queueing behavior.
 
 `statistics` is deliberately outside the measured path, so reading the result
-does not alter it. `reset` directly clears all three atomic counters and is
-intended to delimit a measurement window while no calls are active.
+does not alter it. `reset` delimits a measurement window: under the same mutex
+it checks that no call is active and then clears the counters, or returns
+`ERROR_INPROGRESS` without changing anything if a call is still running.
 
 ### Thunder throttle path
 

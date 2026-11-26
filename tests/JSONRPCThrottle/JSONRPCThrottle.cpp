@@ -81,9 +81,12 @@ namespace Plugin {
     {
         ASSERT(service != nullptr);
 
-        _totalCalls = 0;
-        _activeCalls = 0;
-        _maximumConcurrentCalls = 0;
+        {
+            std::lock_guard<std::mutex> guard(_lock);
+            _totalCalls = 0;
+            _activeCalls = 0;
+            _maximumConcurrentCalls = 0;
+        }
 
         return {};
     }
@@ -101,27 +104,29 @@ namespace Plugin {
 
     void JSONRPCThrottle::Enter()
     {
-        const uint64_t active =
-            _activeCalls.fetch_add(1) + 1;
+        std::lock_guard<std::mutex> guard(_lock);
 
-        _totalCalls.fetch_add(1);
+        ++_activeCalls;
+        ++_totalCalls;
 
-        uint64_t maximum =
-            _maximumConcurrentCalls.load();
-
-        while (
-            active > maximum &&
-            !_maximumConcurrentCalls.compare_exchange_weak(
-                maximum,
-                active
-            )
-        ) {
+        if (_activeCalls > _maximumConcurrentCalls) {
+            _maximumConcurrentCalls = _activeCalls;
         }
     }
 
     void JSONRPCThrottle::Leave()
     {
-        _activeCalls.fetch_sub(1);
+        std::lock_guard<std::mutex> guard(_lock);
+
+        ASSERT(_activeCalls > 0);
+        --_activeCalls;
+    }
+
+    JSONRPCThrottle::Counters JSONRPCThrottle::Snapshot() const
+    {
+        std::lock_guard<std::mutex> guard(_lock);
+
+        return { _totalCalls, _activeCalls, _maximumConcurrentCalls };
     }
 
     uint32_t JSONRPCThrottle::Delay(
@@ -134,11 +139,13 @@ namespace Plugin {
             << std::endl;
         Enter();
 
+        const Counters counters = Snapshot();
+
         std::cout
             << "[PLUGIN] ACTIVE="
-            << _activeCalls
+            << counters.Active
             << " MAX="
-            << _maximumConcurrentCalls
+            << counters.Maximum
             << " thread="
             << std::this_thread::get_id()
             << std::endl;
@@ -172,14 +179,11 @@ namespace Plugin {
         const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED,
         Statistics& response)
     {
-        response.TotalCalls =
-            _totalCalls.load();
+        const Counters counters = Snapshot();
 
-        response.ActiveCalls =
-            _activeCalls.load();
-
-        response.MaximumConcurrentCalls =
-            _maximumConcurrentCalls.load();
+        response.TotalCalls = counters.Total;
+        response.ActiveCalls = counters.Active;
+        response.MaximumConcurrentCalls = counters.Maximum;
 
         return Core::ERROR_NONE;
     }
@@ -187,8 +191,15 @@ namespace Plugin {
     uint32_t JSONRPCThrottle::Reset(
         const Core::JSONRPC::Context& context VARIABLE_IS_NOT_USED)
     {
+        std::lock_guard<std::mutex> guard(_lock);
+
+        // Clearing while a call is in flight would corrupt the statistics and
+        // make that call's Leave() wrap _activeCalls below zero.
+        if (_activeCalls != 0) {
+            return Core::ERROR_INPROGRESS;
+        }
+
         _totalCalls = 0;
-        _activeCalls = 0;
         _maximumConcurrentCalls = 0;
 
         return Core::ERROR_NONE;
