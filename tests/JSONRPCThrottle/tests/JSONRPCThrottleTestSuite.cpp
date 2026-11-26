@@ -152,7 +152,7 @@ protected:
         return ExtractNumber(response, key);
     }
 
-        uint32_t ResetStatistics()
+    uint32_t ResetStatistics()
     {
         string response;
 
