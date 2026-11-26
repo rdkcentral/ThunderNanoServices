@@ -1,0 +1,2 @@
+add_subdirectory(PrivateComRPCClient)
+add_subdirectory(PrivateComRPCTestPlugin)
