@@ -15,9 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(QASecurityAgent)
-
 cmake_minimum_required(VERSION 3.15)
+
+project(QASecurityAgent)
 
 find_package(Thunder)
 
@@ -50,7 +50,7 @@ install(TARGETS ${MODULE_NAME}
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/${STORAGE_DIRECTORY}/plugins
     COMPONENT ${NAMESPACE}_Runtime)
 
-set(PLUGIN_QASECURITYAGENT_STARTMODE "Deactivated" CACHE STRING "Startup mode of the QASecurityAgent plugin")
+set(PLUGIN_QASECURITYAGENT_STARTMODE "Activated" CACHE STRING "Startup mode of the QASecurityAgent plugin")
 set(PLUGIN_QASECURITYAGENT_RESUMED false CACHE BOOL "Start QASecurityAgent in resumed state")
 
 write_config()

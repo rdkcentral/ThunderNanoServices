@@ -26,13 +26,49 @@
 #include <plugins/IPlugin.h>
 #include <websocket/websocket.h>
 
+#include <atomic>
+#include <cstdlib>
+
 namespace Thunder {
 namespace TestCore {
 namespace Tests {
 
 namespace {
 
-static constexpr uint16_t SECURITY_TEST_PORT = 12350;
+/*
+ * TCP port that the embedded Thunder server listens on and that the test
+ * clients connect to (127.0.0.1).
+ *
+ * The port is fixed, not allocated dynamically: it is 12350 unless the
+ * SECURITY_TEST_PORT environment variable overrides it (for example through
+ * the environment of the process or a CTest ENVIRONMENT property), which lets
+ * a test runner avoid a port that is already in use.
+ *
+ * The override must be a whole number from 1 to 65535. Anything else,
+ * including 0, is ignored and the default is used. Port 0 is not accepted
+ * because the clients need to know the actual port, and ThunderTestRuntime
+ * cannot report an OS-assigned one.
+ */
+static constexpr uint16_t DEFAULT_SECURITY_TEST_PORT = 12350;
+
+static uint16_t ResolveSecurityTestPort()
+{
+    uint16_t port = DEFAULT_SECURITY_TEST_PORT;
+    const char* value = std::getenv("SECURITY_TEST_PORT");
+
+    if ((value != nullptr) && (*value != '\0')) {
+        char* end = nullptr;
+        const unsigned long parsed = std::strtoul(value, &end, 10);
+
+        if ((*end == '\0') && (parsed >= 1) && (parsed <= 65535)) {
+            port = static_cast<uint16_t>(parsed);
+        }
+    }
+
+    return port;
+}
+
+static const uint16_t SECURITY_TEST_PORT = ResolveSecurityTestPort();
 
 /*
  * ============================================================================
@@ -143,6 +179,8 @@ class SecurityWebSocketClient
 private:
     using BaseClass = Core::StreamJSONType<Web::WebSocketClientType<Core::SocketStream>, JSONRPCMessageFactory&, Core::JSON::IElement>;
 
+    static constexpr uint32_t MAX_WAIT_TIME_MS = 5000;
+
 public:
     SecurityWebSocketClient(const string& path, const string& query, const Core::NodeId& remoteNode)
         : ClientFactoryBase(5)
@@ -152,7 +190,12 @@ public:
     {
     }
 
-    ~SecurityWebSocketClient() override = default;
+    ~SecurityWebSocketClient() override
+    {
+        // Close and drain before _response / _responseReceived are destroyed.
+        // StreamJSONType's destructor also closes, but only after derived members are gone.
+        EXPECT_EQ(BaseClass::Close(MAX_WAIT_TIME_MS), Core::ERROR_NONE);
+    }
 
     void Received(Core::ProxyType<Core::JSON::IElement>& element) override
     {
@@ -246,15 +289,19 @@ public:
 
     void LinkBody(Core::ProxyType<Web::Response>&) override { }
 
+    // Received() and Send() run on the networking thread: record state only and
+    // assert on the test thread (see Execute()).
     void Received(Core::ProxyType<Web::Response>& response) override
     {
         _statusCode = response->ErrorCode;
-        EXPECT_EQ(_responseReceived.Unlock(), Core::ERROR_NONE);
+        _responseReceived.Unlock();
     }
 
     virtual void Send(const Core::ProxyType<Web::Request>& request) override
     {
-        EXPECT_EQ(request->Verb, Web::Request::HTTP_GET);
+        if (request->Verb != Web::Request::HTTP_GET) {
+            _nonGetSent = true;
+        }
     }
 
     void StateChange() override { } 
@@ -282,7 +329,11 @@ public:
             return Core::ERROR_GENERAL;
         }
 
-        return _responseReceived.Lock(timeoutMs);
+        const uint32_t waitResult = _responseReceived.Lock(timeoutMs);
+
+        EXPECT_FALSE(_nonGetSent.load());
+
+        return waitResult;
     }
 
     uint16_t StatusCode() const
@@ -296,7 +347,9 @@ private:
 
     Core::Event _responseReceived;
 
-    uint16_t _statusCode { 0 };
+    // Written on the networking thread, read on the test thread.
+    std::atomic<uint16_t> _statusCode { 0 };
+    std::atomic<bool> _nonGetSent { false };
 
     static Core::ProxyPoolType<Web::Response> _responseFactory;
 };
