@@ -38,50 +38,9 @@ namespace Plugin {
         );
     }
 
-    namespace {
-
-        class ProcessLargeDataParams : public Core::JSON::Container {
-        public:
-            ProcessLargeDataParams()
-                : Core::JSON::Container()
-                , Payload()
-                , DelayMs(0)
-                , Echo(true)
-            {
-                Add(_T("payload"), &Payload);
-                Add(_T("delayMs"), &DelayMs);
-                Add(_T("echo"), &Echo);
-            }
-
-            ProcessLargeDataParams(const ProcessLargeDataParams&) = delete;
-            ProcessLargeDataParams& operator=(const ProcessLargeDataParams&) = delete;
-
-        public:
-            Core::JSON::String Payload;
-            Core::JSON::DecUInt32 DelayMs;
-            Core::JSON::Boolean Echo;
-        };
-
-        class ProcessLargeDataResult : public Core::JSON::Container {
-        public:
-            ProcessLargeDataResult()
-                : Core::JSON::Container()
-                , Response()
-            {
-                Add(_T("response"), &Response);
-            }
-
-            ProcessLargeDataResult(const ProcessLargeDataResult&) = delete;
-            ProcessLargeDataResult& operator=(const ProcessLargeDataResult&) = delete;
-
-        public:
-            Core::JSON::String Response;
-        };
-
-    } // namespace
-
     PrivateComRPCClient::PrivateComRPCClient()
         : _service(nullptr)
+        , _callsign()
     {
         Register<ProcessLargeDataParams, ProcessLargeDataResult>(_T("processLargeData"), &PrivateComRPCClient::ProcessLargeData, this);
     }
@@ -99,6 +58,12 @@ namespace Plugin {
         _service = service;
         _service->AddRef();
 
+        Config config;
+        config.FromString(_service->ConfigLine());
+
+        // Fall back to the default callsign if none is configured.
+        _callsign = (config.Callsign.IsSet() && (config.Callsign.Value().empty() == false)) ? config.Callsign.Value() : string(_T("PrivateComRPCTest"));
+
         return string();
     }
 
@@ -108,6 +73,7 @@ namespace Plugin {
 
         _service->Release();
         _service = nullptr;
+        _callsign.clear();
     }
 
     string PrivateComRPCClient::Information() const
@@ -122,8 +88,7 @@ namespace Plugin {
         Core::hresult result = Core::ERROR_UNAVAILABLE;
 
         QualityAssurance::IPrivateComRPC* interface =
-        _service->QueryInterfaceByCallsign<QualityAssurance::IPrivateComRPC>(
-            _T("PrivateComRPCTest"));
+        _service->QueryInterfaceByCallsign<QualityAssurance::IPrivateComRPC>(_callsign);
 
         if (interface != nullptr) {
             string output;

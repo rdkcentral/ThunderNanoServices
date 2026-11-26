@@ -15,9 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(PrivateComRPCTest)
-
 cmake_minimum_required(VERSION 3.15)
+
+project(PrivateComRPCTest)
 
 find_package(Thunder)
 project_version(1.0.0)

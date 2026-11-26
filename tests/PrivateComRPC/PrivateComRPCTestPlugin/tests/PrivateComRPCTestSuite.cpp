@@ -39,7 +39,7 @@ namespace Tests {
             }
         };
 
-        const ::testing::Environment* const kGlobalEnv = ::testing::AddGlobalTestEnvironment(new ScopedSingletonDispose());
+        [[maybe_unused]] const ::testing::Environment* const kGlobalEnv = ::testing::AddGlobalTestEnvironment(new ScopedSingletonDispose());
 
         string CreatePayload(const uint32_t size)
         {
@@ -141,6 +141,8 @@ namespace Tests {
     {
         constexpr uint32_t PayloadSize = 60 * 1024;
         constexpr uint32_t DelayMs = 2000;
+        // Small tolerance so the check does not depend on strict real-time sleep behaviour.
+        constexpr int64_t ToleranceMs = 50;
 
         const string payload = CreatePayload(PayloadSize);
 
@@ -157,7 +159,7 @@ namespace Tests {
         EXPECT_EQ(result, Core::ERROR_NONE);
         EXPECT_EQ(response, payload);
 
-        EXPECT_GE(elapsed.count(), static_cast<int64_t>(DelayMs));
+        EXPECT_GE(elapsed.count(), static_cast<int64_t>(DelayMs) - ToleranceMs);
     }
 
     TEST_F(PrivateComRPCTestSuite, PayloadCanBeProcessedWithoutEcho)

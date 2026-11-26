@@ -76,12 +76,17 @@ root.add("mode", "Local")
 configuration.add("root", root)
 ```
 
-The client configuration contains only its startup settings:
+The client configuration contains its startup settings and the callsign of the server plugin it connects to:
 
 ```text
 startmode = "@PLUGIN_PRIVATECOMRPCCLIENT_STARTMODE@"
 resumed = "@PLUGIN_PRIVATECOMRPCCLIENT_RESUMED@"
+
+configuration = JSON()
+configuration.add("callsign", "@PLUGIN_PRIVATECOMRPCCLIENT_SERVER_CALLSIGN@")
 ```
+
+The server callsign defaults to `PrivateComRPCTest` and is configurable with `-DPLUGIN_PRIVATECOMRPCCLIENT_SERVER_CALLSIGN=<callsign>` during CMake configuration. If the `callsign` field is missing or empty at runtime, the client falls back to `PrivateComRPCTest`.
 
 The JSON-RPC HTTP endpoint is supplied by the Thunder deployment; this implementation does not configure port `55555`. The examples below assume:
 
@@ -439,7 +444,7 @@ The client exposes:
 PrivateComRPCClient.processLargeData
 ```
 
-It acquires `QualityAssurance::IPrivateComRPC` using the `PrivateComRPCTest` callsign, invokes `ProcessLargeData`, and returns the response through JSON-RPC.
+It acquires `QualityAssurance::IPrivateComRPC` using the configured server callsign (default `PrivateComRPCTest`), invokes `ProcessLargeData`, and returns the response through JSON-RPC.
 
 ## JSON Request
 

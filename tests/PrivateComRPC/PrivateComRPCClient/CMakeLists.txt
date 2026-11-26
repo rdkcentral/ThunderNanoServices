@@ -15,9 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-project(PrivateComRPCClient)
-
 cmake_minimum_required(VERSION 3.15)
+
+project(PrivateComRPCClient)
 
 find_package(Thunder)
 
@@ -56,5 +56,8 @@ set(PLUGIN_PRIVATECOMRPCCLIENT_STARTMODE "Deactivated" CACHE STRING
 
 set(PLUGIN_PRIVATECOMRPCCLIENT_RESUMED false CACHE BOOL
     "Start PrivateComRPCClient in resumed state")
+
+set(PLUGIN_PRIVATECOMRPCCLIENT_SERVER_CALLSIGN "PrivateComRPCTest" CACHE STRING
+    "Callsign of the plugin providing IPrivateComRPC that PrivateComRPCClient connects to")
 
 write_config()

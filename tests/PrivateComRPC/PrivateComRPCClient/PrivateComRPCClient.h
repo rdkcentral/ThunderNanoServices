@@ -27,6 +27,23 @@ namespace Plugin {
     class PrivateComRPCClient : public PluginHost::IPlugin
                                , public PluginHost::JSONRPC {
     private:
+        class Config : public Core::JSON::Container {
+        public:
+            Config()
+                : Core::JSON::Container()
+                , Callsign(_T("PrivateComRPCTest"))
+            {
+                Add(_T("callsign"), &Callsign);
+            }
+
+            Config(const Config&) = delete;
+            Config& operator=(const Config&) = delete;
+
+        public:
+            // Callsign of the plugin implementing QualityAssurance::IPrivateComRPC.
+            Core::JSON::String Callsign;
+        };
+
         class ProcessLargeDataParams : public Core::JSON::Container {
         public:
             ProcessLargeDataParams()
@@ -88,6 +105,7 @@ namespace Plugin {
 
     private:
         PluginHost::IShell* _service;
+        string _callsign;
     };
 
 } // namespace Plugin
