@@ -39,6 +39,9 @@ namespace Tests {
         constexpr const char* ProxyStubPath = TESTDELEGATEDRELEASE_TEST_PROXYSTUB_PATH;
         constexpr uint32_t PingValue = 0x12345678;
         constexpr uint32_t WaitTime = 5000;
+        // How long a peer must stay alive in the "not destroyed yet" checks.
+        // This bounds detection: a release after this window is not caught.
+        constexpr uint32_t NotDestroyedWaitMs = 500;
 
         class Peer : public QualityAssurance::ITestDelegatedReleasePeer {
         private:
@@ -148,7 +151,7 @@ namespace Tests {
         ASSERT_EQ(interface->HoldPeer(peer), Core::ERROR_NONE);
         interface->Release();
         EXPECT_NE(peer->Release(), Core::ERROR_DESTRUCTION_SUCCEEDED);
-        EXPECT_EQ(destroyed->Lock(100), Core::ERROR_TIMEDOUT);
+        EXPECT_EQ(destroyed->Lock(NotDestroyedWaitMs), Core::ERROR_TIMEDOUT);
 
         Core::ProxyType<PluginHost::IShell> shell = _runtime.GetShell(Callsign);
         ASSERT_TRUE(shell.IsValid());
@@ -210,7 +213,7 @@ namespace Tests {
         ASSERT_TRUE(firstShell.IsValid());
         ASSERT_EQ(firstShell->Deactivate(PluginHost::IShell::REQUESTED), Core::ERROR_NONE);
         EXPECT_EQ(firstDestroyed->Lock(WaitTime), Core::ERROR_NONE);
-        EXPECT_EQ(secondDestroyed->Lock(100), Core::ERROR_TIMEDOUT);
+        EXPECT_EQ(secondDestroyed->Lock(NotDestroyedWaitMs), Core::ERROR_TIMEDOUT);
 
         Core::ProxyType<PluginHost::IShell> secondShell = _runtime.GetShell(SecondCallsign);
         ASSERT_TRUE(secondShell.IsValid());

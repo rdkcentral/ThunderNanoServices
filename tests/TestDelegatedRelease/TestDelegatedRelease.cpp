@@ -34,7 +34,9 @@ namespace Plugin {
 
     const string TestDelegatedRelease::Initialize(PluginHost::IShell* service)
     {
-        ASSERT(service != nullptr);
+        if (service == nullptr) {
+            return _T("TestDelegatedRelease: no service supplied");
+        }
 
         _service = service;
         _service->AddRef();
@@ -60,8 +62,6 @@ namespace Plugin {
 
     Core::hresult TestDelegatedRelease::HoldPeer(QualityAssurance::ITestDelegatedReleasePeer* peer)
     {
-        ASSERT(peer != nullptr);
-
         if (peer == nullptr) {
             return Core::ERROR_BAD_REQUEST;
         }
