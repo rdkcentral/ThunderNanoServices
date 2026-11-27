@@ -108,37 +108,45 @@ Expected after clearing the snapshot: count `1`, latest `Deactivated:PluginA`. T
 
 ## IController Lifecycle Filtering
 
-The controller path reports plugin state and reason. Use the same selected/control callsigns:
+The controller path reports plugin state and reason. Use the same selected/control callsigns. The IShell example leaves both plugins deactivated, so reactivate them first:
 
 ```bash
-curl -s http://127.0.0.1:55555/jsonrpc \
+curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":9,"method":"TestPerCallsignRegistration.clearControllerNotifications","params":{}}'
+  --data '{"jsonrpc":"2.0","id":9,"method":"Controller.1.activate","params":{"callsign":"PluginA"}}'
 
-curl -s http://127.0.0.1:55555/jsonrpc \
+curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":10,"method":"TestPerCallsignRegistration.monitorController","params":{"callsign":"PluginA"}}'
+  --data '{"jsonrpc":"2.0","id":10,"method":"Controller.1.activate","params":{"callsign":"PluginB"}}'
 
-# Clear the initial active-state snapshot before checking transitions.
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
   --data '{"jsonrpc":"2.0","id":11,"method":"TestPerCallsignRegistration.clearControllerNotifications","params":{}}'
 
-curl -s -X POST http://127.0.0.1:55555/jsonrpc \
+curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":12,"method":"Controller.1.deactivate","params":{"callsign":"PluginB"}}'
+  --data '{"jsonrpc":"2.0","id":12,"method":"TestPerCallsignRegistration.monitorController","params":{"callsign":"PluginA"}}'
+
+# Clear the initial active-state snapshot before checking transitions.
+curl -s http://127.0.0.1:55555/jsonrpc \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","id":13,"method":"TestPerCallsignRegistration.clearControllerNotifications","params":{}}'
 
 curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":13,"method":"Controller.1.deactivate","params":{"callsign":"PluginA"}}'
+  --data '{"jsonrpc":"2.0","id":14,"method":"Controller.1.deactivate","params":{"callsign":"PluginB"}}'
+
+curl -s -X POST http://127.0.0.1:55555/jsonrpc \
+  -H 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","id":15,"method":"Controller.1.deactivate","params":{"callsign":"PluginA"}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":14,"method":"TestPerCallsignRegistration.controllerNotificationCount","params":{}}'
+  --data '{"jsonrpc":"2.0","id":16,"method":"TestPerCallsignRegistration.controllerNotificationCount","params":{}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":15,"method":"TestPerCallsignRegistration.lastControllerNotification","params":{}}'
+  --data '{"jsonrpc":"2.0","id":17,"method":"TestPerCallsignRegistration.lastControllerNotification","params":{}}'
 ```
 
 Expected after clearing the snapshot: count `1`, latest `StateChange:PluginA:DEACTIVATED:REQUESTED`.
@@ -158,7 +166,7 @@ cmake --build build/ThunderNanoServices --target install -j"$(nproc)"
 
 curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":16,"method":"Controller.1.activate","params":{"callsign":"TestStateControl"}}'
+  --data '{"jsonrpc":"2.0","id":18,"method":"Controller.1.activate","params":{"callsign":"TestStateControl"}}'
 ```
 
 Register for the target and clear its initial snapshot before measuring transitions. Monitoring an active target can immediately report both `StateChange` and `StateControlStateChange`; counts below begin after the clear:
@@ -166,23 +174,23 @@ Register for the target and clear its initial snapshot before measuring transiti
 ```bash
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":17,"method":"TestPerCallsignRegistration.monitorController","params":{"callsign":"TestStateControl"}}'
+  --data '{"jsonrpc":"2.0","id":19,"method":"TestPerCallsignRegistration.monitorController","params":{"callsign":"TestStateControl"}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":18,"method":"TestPerCallsignRegistration.clearControllerNotifications","params":{}}'
+  --data '{"jsonrpc":"2.0","id":20,"method":"TestPerCallsignRegistration.clearControllerNotifications","params":{}}'
 
 curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":19,"method":"Controller.1.suspend","params":{"callsign":"TestStateControl"}}'
+  --data '{"jsonrpc":"2.0","id":21,"method":"Controller.1.suspend","params":{"callsign":"TestStateControl"}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":20,"method":"TestPerCallsignRegistration.controllerNotificationCount","params":{}}'
+  --data '{"jsonrpc":"2.0","id":22,"method":"TestPerCallsignRegistration.controllerNotificationCount","params":{}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":21,"method":"TestPerCallsignRegistration.lastControllerNotification","params":{}}'
+  --data '{"jsonrpc":"2.0","id":23,"method":"TestPerCallsignRegistration.lastControllerNotification","params":{}}'
 ```
 
 After suspend, expect count `1` and `StateControlStateChange:TestStateControl:SUSPENDED`. After `Controller.1.resume`, expect cumulative count `2` and latest `StateControlStateChange:TestStateControl:RESUMED`.
@@ -194,17 +202,17 @@ Unregister active selections and restore modified plugin states:
 ```bash
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":22,"method":"TestPerCallsignRegistration.stopMonitoringShell","params":{"callsign":"PluginA"}}'
+  --data '{"jsonrpc":"2.0","id":24,"method":"TestPerCallsignRegistration.stopMonitoringShell","params":{"callsign":"PluginA"}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":23,"method":"TestPerCallsignRegistration.stopMonitoringController","params":{"callsign":"PluginA"}}'
+  --data '{"jsonrpc":"2.0","id":25,"method":"TestPerCallsignRegistration.stopMonitoringController","params":{"callsign":"PluginA"}}'
 
 curl -s http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":24,"method":"TestPerCallsignRegistration.stopMonitoringController","params":{"callsign":"TestStateControl"}}'
+  --data '{"jsonrpc":"2.0","id":26,"method":"TestPerCallsignRegistration.stopMonitoringController","params":{"callsign":"TestStateControl"}}'
 
 curl -s -X POST http://127.0.0.1:55555/jsonrpc \
   -H 'Content-Type: application/json' \
-  --data '{"jsonrpc":"2.0","id":25,"method":"Controller.1.resume","params":{"callsign":"TestStateControl"}}'
+  --data '{"jsonrpc":"2.0","id":27,"method":"Controller.1.resume","params":{"callsign":"TestStateControl"}}'
 ```

@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 #include "Module.h"
-#include "Module.h"
 
 #include <qa_interfaces/IPerCallsignRegistrationTest.h>
 #include <test_support/ThunderTestRuntime.h>
